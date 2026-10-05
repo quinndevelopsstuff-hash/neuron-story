@@ -1,0 +1,312 @@
+/* Inside the Machine: overlay styles. The 3D canvas sits fixed behind everything;
+   the page itself is just a tall scroll spacer. All overlay elements are fixed-position,
+   so nothing in the document flow ever moves (no layout shift). */
+
+:root {
+  --bg: #010205;
+  --ink: #e9f4ff;
+  --ink-dim: #9fb7cc;
+  --cyan: #5fd4ff;
+  --amber: #ffb04a;
+  --panel: rgba(3, 9, 20, 0.62);
+  --line: rgba(140, 205, 255, 0.16);
+  --gutter: 16px;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transparent; }
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100lvh;
+  display: block;
+  z-index: 0;
+}
+
+#scroll-space { position: relative; width: 1px; height: 14000vh; pointer-events: none; }
+
+#ui { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+/* ---------- intro ---------- */
+.intro {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gutter);
+  text-align: center;
+}
+.intro .eyebrow {
+  margin: 0 0 0.9rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.intro h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.4rem, 1.4rem + 5vw, 5rem);
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  text-shadow: 0 0 40px rgba(80, 180, 255, 0.35);
+}
+.intro .lede {
+  margin: 1.1rem 0 0;
+  max-width: 30rem;
+  font-size: clamp(1.02rem, 0.95rem + 0.4vw, 1.2rem);
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+.intro .seven, .intro .nowrap { white-space: nowrap; }
+.intro .seven { color: var(--amber); font-family: var(--font-display); font-weight: 600; }
+.intro .status { min-height: 1.4em; margin: 1.6rem 0 0; font-size: 0.9rem; color: var(--ink-dim); }
+.intro .status.error { color: #ffc3a8; max-width: 26rem; }
+.intro .hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(6vh, calc(env(safe-area-inset-bottom) + 24px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.intro.ready .hint { opacity: 0.85; }
+.chevron {
+  width: 14px;
+  height: 14px;
+  border-right: 2px solid var(--cyan);
+  border-bottom: 2px solid var(--cyan);
+  transform: rotate(45deg);
+  animation: nudge 1.8s ease-in-out infinite;
+}
+@keyframes nudge {
+  0%, 100% { transform: translateY(0) rotate(45deg); opacity: 0.5; }
+  50% { transform: translateY(6px) rotate(45deg); opacity: 1; }
+}
+
+/* ---------- narration ---------- */
+.narration {
+  position: fixed;
+  left: 50%;
+  bottom: max(7vh, calc(env(safe-area-inset-bottom) + 20px));
+  width: min(40rem, calc(100% - 2 * var(--gutter)));
+  transform: translateX(-50%);
+}
+.beat {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1.05rem 1.35rem 1.15rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  will-change: opacity, transform;
+}
+.beat .text {
+  margin: 0;
+  font-size: clamp(1.02rem, 0.92rem + 0.45vw, 1.24rem);
+  line-height: 1.6;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.beat em { color: #fff; font-style: italic; }
+.beat .stage {
+  margin: 0.7rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--line);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #8fb3d0;
+}
+.beat .stage b { color: var(--cyan); font-weight: 600; margin-right: 0.3em; }
+
+.relu { display: block; width: min(220px, 70%); margin: 0.8rem auto 0; }
+.relu .axis { stroke: rgba(160, 200, 240, 0.35); stroke-width: 1.5; }
+.relu .lin { stroke: var(--cyan); stroke-width: 3; }
+.relu .hinge { stroke: var(--amber); stroke-width: 3; stroke-linejoin: round; }
+
+/* ---------- chapter cards ---------- */
+.chapter-card {
+  position: fixed;
+  left: var(--gutter);
+  right: var(--gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+  opacity: 0;
+}
+.chapter-card .num {
+  display: block;
+  font-size: 0.8rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.chapter-card h2 {
+  margin: 0.6rem 0 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2rem, 1.2rem + 4vw, 3.8rem);
+  letter-spacing: -0.01em;
+  text-shadow: 0 0 30px rgba(80, 180, 255, 0.35);
+}
+
+/* ---------- progress bar + chapter markers ---------- */
+.progress {
+  position: fixed;
+  top: env(safe-area-inset-top);
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(150, 200, 255, 0.1);
+  pointer-events: auto;
+}
+.progress .fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #2a8dff, var(--cyan));
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  box-shadow: 0 0 8px rgba(95, 212, 255, 0.6);
+}
+.marker {
+  position: absolute;
+  top: -8px;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.marker::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 6px;
+  width: 4px;
+  height: 7px;
+  border-radius: 2px;
+  background: rgba(200, 225, 255, 0.45);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.marker.done::before { background: var(--cyan); }
+.marker.current::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.marker .tip {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-size: 0.75rem;
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.marker:first-of-type .tip { left: 0; transform: none; }
+.marker:last-of-type .tip { left: auto; right: 0; transform: none; }
+.marker:hover .tip, .marker:focus-visible .tip { opacity: 1; }
+.marker:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 4px; }
+
+.chapter-label {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 14px);
+  left: var(--gutter);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.chapter-label.visible { opacity: 0.85; }
+
+/* ---------- end card ---------- */
+.end-card {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(30rem, calc(100% - 2 * var(--gutter)));
+  transform: translate(-50%, -50%);
+  text-align: center;
+  opacity: 0;
+  pointer-events: auto;
+}
+.end-card h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.8rem, 1.3rem + 2.4vw, 2.8rem);
+}
+.end-card p { color: var(--ink-dim); line-height: 1.6; }
+.end-card .restart {
+  margin-top: 0.6rem;
+  padding: 0.65rem 1.3rem;
+  border-radius: 999px;
+  border: 1px solid rgba(95, 212, 255, 0.5);
+  background: rgba(20, 60, 90, 0.35);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.end-card .restart:hover { background: rgba(30, 90, 130, 0.5); }
+.end-card .restart:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  :root { --panel: rgba(3, 9, 20, 0.72); }
+  .beat { padding: 0.9rem 1.05rem 1rem; border-radius: 12px; }
+  .chapter-label { top: calc(env(safe-area-inset-top) + 12px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron { animation: none; opacity: 0.9; }
+  .chapter-label, .intro .hint, .marker::before { transition: none; }
+}

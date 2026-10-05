@@ -1,0 +1,21 @@
+{
+  "name": "neuron-story",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A scroll-driven 3D flight through a neural network recognizing a handwritten 7.",
+  "scripts": {
+    "story": "node scripts/story-to-json.mjs",
+    "predev": "npm run story",
+    "dev": "vite",
+    "prebuild": "npm run story",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2"
+  }
+}

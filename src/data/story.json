@@ -1,0 +1,593 @@
+{
+  "title": "Inside the Machine: A Flight Through a Neural Network",
+  "chapters": [
+    {
+      "number": 1,
+      "title": "The Dark",
+      "beats": [
+        {
+          "id": "1.1",
+          "stage": "Total black. Far ahead, a single faint point of cool blue light pulses slowly. The camera is still.",
+          "text": "Look closely. There, in the dark: one faint light. That's where we're going.",
+          "html": "Look closely. There, in the dark: one faint light. That's where we're going.",
+          "words": 13
+        },
+        {
+          "id": "1.2",
+          "stage": "The camera begins a slow drift forward. A sparse, very dim starfield fades in at the edges of the screen.",
+          "text": "Somewhere, someone wrote the number seven on a scrap of paper. A quick stroke across the top, then a slash down and to the left. If you saw it, you'd know it instantly.",
+          "html": "Somewhere, someone wrote the number seven on a scrap of paper. A quick stroke across the top, then a slash down and to the left. If you saw it, you'd know it instantly.",
+          "words": 33
+        },
+        {
+          "id": "1.3",
+          "stage": "The light ahead flickers once, as if listening.",
+          "text": "But try to explain *how* you knew. Not \"it looks like a seven,\" but the actual rule. What, exactly, makes a seven a seven?",
+          "html": "But try to explain <em>how</em> you knew. Not \"it looks like a seven,\" but the actual rule. What, exactly, makes a seven a seven?",
+          "words": 24
+        },
+        {
+          "id": "1.4",
+          "stage": "The camera keeps drifting. The light pulses patiently.",
+          "text": "Try a thought experiment. Describe a seven over the phone to someone who has never seen a written number. You'd run out of words long before the world ran out of ways to write a seven.",
+          "html": "Try a thought experiment. Describe a seven over the phone to someone who has never seen a written number. You'd run out of words long before the world ran out of ways to write a seven.",
+          "words": 36
+        },
+        {
+          "id": "1.5",
+          "stage": "Three faint ghost sevens drift past in the dark, each written differently: one crossed, one with a curled top, one lazy and nearly vertical. They dissolve.",
+          "text": "Maybe: a flat line on top, a diagonal coming down. But some people cross their sevens. Some curl the top. Some write it so lazily it's nearly a one.",
+          "html": "Maybe: a flat line on top, a diagonal coming down. But some people cross their sevens. Some curl the top. Some write it so lazily it's nearly a one.",
+          "words": 29
+        },
+        {
+          "id": "1.6",
+          "stage": "The ghosts are gone. The camera keeps drifting; the light grows slightly.",
+          "text": "Every rule you write has exceptions, and every exception needs another rule. People spent years trying to hand-write rules like these, and it was brutally hard.",
+          "html": "Every rule you write has exceptions, and every exception needs another rule. People spent years trying to hand-write rules like these, and it was brutally hard.",
+          "words": 26
+        },
+        {
+          "id": "1.7",
+          "stage": "The light brightens into a soft glow. The starfield thickens a little.",
+          "text": "So here's a stranger idea. What if, instead of giving a machine the rules, we showed it tens of thousands of examples and let it work out its own?",
+          "html": "So here's a stranger idea. What if, instead of giving a machine the rules, we showed it tens of thousands of examples and let it work out its own?",
+          "words": 29
+        },
+        {
+          "id": "1.8",
+          "stage": "The camera accelerates gently. Behind the glow, faint structure appears: rows of tiny dim points, and beyond them, scattered dark spheres.",
+          "text": "That's what a neural network does. And tonight we're going inside one: a small one, already trained, in the instant it looks at a handwritten seven.",
+          "html": "That's what a neural network does. And tonight we're going inside one: a small one, already trained, in the instant it looks at a handwritten seven.",
+          "words": 26
+        },
+        {
+          "id": "1.9",
+          "stage": "A barely visible web of threads catches the light for a moment, then fades.",
+          "text": "Despite the name, it isn't a brain. It's arithmetic: lots of simple calculations, wired together. The surprise is what that arithmetic can do.",
+          "html": "Despite the name, it isn't a brain. It's arithmetic: lots of simple calculations, wired together. The surprise is what that arithmetic can do.",
+          "words": 23
+        },
+        {
+          "id": "1.10",
+          "stage": "The glow fills the center of the screen. The camera holds for a beat, then pushes forward.",
+          "text": "You're the camera. I'm your guide. Keep scrolling, and we'll fly in.",
+          "html": "You're the camera. I'm your guide. Keep scrolling, and we'll fly in.",
+          "words": 12
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "The Input Layer",
+      "beats": [
+        {
+          "id": "2.1",
+          "stage": "The glow resolves into a flat square grid of 784 dim points, 28 across and 28 down, floating face-on. The camera approaches from far away. Palette: pale cyan on near-black.",
+          "text": "Here's the front door: a grid, 28 points across and 28 down. That's 784 points, and each one is a single pixel of the image.",
+          "html": "Here's the front door: a grid, 28 points across and 28 down. That's 784 points, and each one is a single pixel of the image.",
+          "words": 25
+        },
+        {
+          "id": "2.2",
+          "stage": "The camera slows. The grid hangs silent, every point equally dim.",
+          "text": "This is all the network will ever see of that seven. No paper, no ink, no pen. Just 784 numbers. Your eye, by comparison, has over a hundred million light-sensitive cells.",
+          "html": "This is all the network will ever see of that seven. No paper, no ink, no pen. Just 784 numbers. Your eye, by comparison, has over a hundred million light-sensitive cells.",
+          "words": 31
+        },
+        {
+          "id": "2.3",
+          "stage": "One pixel near the center brightens to full white, then fades to a mid-grey, then goes dark, demonstrating the range.",
+          "text": "Each pixel holds a brightness between 0 and 1. Zero is blank paper. One is solid ink. The values in between are the soft grey edges of a stroke.",
+          "html": "Each pixel holds a brightness between 0 and 1. Zero is blank paper. One is solid ink. The values in between are the soft grey edges of a stroke.",
+          "words": 29
+        },
+        {
+          "id": "2.4",
+          "stage": "Pixels light up in drawing order: first a horizontal bar across the top, then a long diagonal sweeping down to the lower left. The digit 7 appears in cyan-white, with softer, dimmer pixels along its edges.",
+          "text": "Watch. Here comes the seven: the top bar, then the long diagonal. The edges glow softer, because a pen stroke never lands neatly on a pixel grid.",
+          "html": "Watch. Here comes the seven: the top bar, then the long diagonal. The edges glow softer, because a pen stroke never lands neatly on a pixel grid.",
+          "words": 27
+        },
+        {
+          "id": "2.5",
+          "stage": "The camera glides in until the 7 overfills the screen. Individual pixels become separate glowing points with dark gaps between them.",
+          "text": "Up close, the seven dissolves. From here you can't see a seven at all, only individual lights: a few bright, most dark.",
+          "html": "Up close, the seven dissolves. From here you can't see a seven at all, only individual lights: a few bright, most dark.",
+          "words": 22
+        },
+        {
+          "id": "2.6",
+          "stage": "The camera hovers among the pixels. Each lit pixel pulses independently, out of sync with its neighbors.",
+          "text": "That's exactly the network's situation. It never gets \"the shape.\" Each input knows only its own brightness, and nothing about its neighbors.",
+          "html": "That's exactly the network's situation. It never gets \"the shape.\" Each input knows only its own brightness, and nothing about its neighbors.",
+          "words": 22
+        },
+        {
+          "id": "2.7",
+          "stage": "The grid unrolls row by row into one long line of 784 points stretching off into the fog, holds for a moment, then rolls back into a square.",
+          "text": "Here's a strange fact. To this kind of network, the grid is really one long list of 784 numbers. Shuffle the pixel order, the same way for every image, and it could learn just as well.",
+          "html": "Here's a strange fact. To this kind of network, the grid is really one long list of 784 numbers. Shuffle the pixel order, the same way for every image, and it could learn just as well.",
+          "words": 36
+        },
+        {
+          "id": "2.8",
+          "stage": "A few random pixel pairs are linked by faint dashed lines, then the lines fade.",
+          "text": "So \"nearby\" means nothing to it at the start. Whatever it figures out about how pixels relate, it has to learn from examples.",
+          "html": "So \"nearby\" means nothing to it at the start. Whatever it figures out about how pixels relate, it has to learn from examples.",
+          "words": 23
+        },
+        {
+          "id": "2.9",
+          "stage": "The camera pivots around the edge of the grid. Behind it, in the distance, a loose cluster of unlit spheres waits in the fog.",
+          "text": "So how do you get from 784 separate lights to a single idea, \"seven\"? You pass them along to something that can combine them. Let's follow.",
+          "html": "So how do you get from 784 separate lights to a single idea, \"seven\"? You pass them along to something that can combine them. Let's follow.",
+          "words": 26
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Neurons Wake Up",
+      "beats": [
+        {
+          "id": "3.1",
+          "stage": "The camera passes through the plane of the grid. Ahead, 32 spheres hang in a gently curved formation, dark blue and barely visible. Lighting shifts to a deeper indigo.",
+          "text": "This is the first hidden layer, \"hidden\" simply because its values aren't the input or the final answer. Thirty-two neurons, waiting.",
+          "html": "This is the first hidden layer, \"hidden\" simply because its values aren't the input or the final answer. Thirty-two neurons, waiting.",
+          "words": 21
+        },
+        {
+          "id": "3.2",
+          "stage": "The camera closes in on a single neuron. The others blur into the fog.",
+          "text": "Let's pick one and look closely. An artificial neuron is surprisingly simple. It does three things.",
+          "html": "Let's pick one and look closely. An artificial neuron is surprisingly simple. It does three things.",
+          "words": 16
+        },
+        {
+          "id": "3.3",
+          "stage": "Faint threads appear, running from all 784 pixels behind us to this one neuron, like a cone of fine wire.",
+          "text": "First, it listens to every pixel, all 784 of them. Each connection has its own number, called a weight, that says how much that pixel matters to this neuron.",
+          "html": "First, it listens to every pixel, all 784 of them. Each connection has its own number, called a weight, that says how much that pixel matters to this neuron.",
+          "words": 29
+        },
+        {
+          "id": "3.4",
+          "stage": "Threads from the lit pixels of the 7 brighten. Most threads, from dark pixels, stay faint.",
+          "text": "It multiplies each pixel's brightness by its weight and adds everything up. That's the weighted sum. Dark pixels contribute nothing, since zero times anything is zero.",
+          "html": "It multiplies each pixel's brightness by its weight and adds everything up. That's the weighted sum. Dark pixels contribute nothing, since zero times anything is zero.",
+          "words": 26
+        },
+        {
+          "id": "3.5",
+          "stage": "Some of the bright threads are cyan (positive), some violet (negative). The neuron's inner glow wavers up, then down, as contributions arrive.",
+          "text": "Think of it as a vote. Bright pixels on positive weights push the total up. Bright pixels on negative weights pull it down.",
+          "html": "Think of it as a vote. Bright pixels on positive weights push the total up. Bright pixels on negative weights pull it down.",
+          "words": 23
+        },
+        {
+          "id": "3.6",
+          "stage": "A small ring around the neuron rotates slightly, like a dial being set.",
+          "text": "Second, it adds one more number: the bias. The bias works like a threshold dial, deciding how easy or hard this neuron is to excite before any pixel has its say.",
+          "html": "Second, it adds one more number: the bias. The bias works like a threshold dial, deciding how easy or hard this neuron is to excite before any pixel has its say.",
+          "words": 31
+        },
+        {
+          "id": "3.7",
+          "stage": "The neuron's glow hesitates, then flares from dark blue to warm amber.",
+          "text": "Third, the activation function. This network uses one called ReLU, a very simple rule: if the total is negative, output zero. If it's positive, pass it along unchanged.",
+          "html": "Third, the activation function. This network uses one called ReLU, a very simple rule: if the total is negative, output zero. If it's positive, pass it along unchanged.",
+          "words": 28
+        },
+        {
+          "id": "3.8",
+          "stage": "A single amber pulse leaves the neuron and travels forward into the dark.",
+          "text": "That's the whole recipe: weighted sum, plus bias, through the activation. This neuron's total came out positive, so it fired.",
+          "html": "That's the whole recipe: weighted sum, plus bias, through the activation. This neuron's total came out positive, so it fired.",
+          "words": 20
+        },
+        {
+          "id": "3.9",
+          "stage": "A brief diagram-like flash: a straight line, then the same line bent at zero into a hinge.",
+          "text": "Why bother with that last step? Without it, the whole network, however many layers deep, would collapse into one big weighted sum. That bend at zero is what lets layers build on each other.",
+          "html": "Why bother with that last step? Without it, the whole network, however many layers deep, would collapse into one big weighted sum. That bend at zero is what lets layers build on each other.",
+          "words": 34
+        },
+        {
+          "id": "3.10",
+          "stage": "The camera pulls back. Across the layer, 22 of the 32 neurons flare amber at different intensities; the other 10 stay dark blue.",
+          "text": "Now zoom out. All thirty-two did the same thing, each with its own weights. Some fired strongly, some weakly, and ten not at all.",
+          "html": "Now zoom out. All thirty-two did the same thing, each with its own weights. Some fired strongly, some weakly, and ten not at all.",
+          "words": 24
+        },
+        {
+          "id": "3.11",
+          "stage": "The layer settles into a quiet shimmer.",
+          "text": "About that word \"neuron\": real brain cells inspired the idea, but they're vastly more complicated. Think of this as a cartoon of a neuron, useful but not literal.",
+          "html": "About that word \"neuron\": real brain cells inspired the idea, but they're vastly more complicated. Think of this as a cartoon of a neuron, useful but not literal.",
+          "words": 28
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "The Connections",
+      "beats": [
+        {
+          "id": "4.1",
+          "stage": "The camera rises above the gap between the input grid and the first hidden layer. The full web comes into view: over 25,000 threads, most faint, some bright. Palette shifts to cyan and teal.",
+          "text": "Pull back and you can see what joins these layers. Every pixel connects to every neuron in the first hidden layer. That's 784 times 32, more than twenty-five thousand threads.",
+          "html": "Pull back and you can see what joins these layers. Every pixel connects to every neuron in the first hidden layer. That's 784 times 32, more than twenty-five thousand threads.",
+          "words": 30
+        },
+        {
+          "id": "4.2",
+          "stage": "Brightness and thickness of threads vary visibly. Cyan threads and dimmer violet threads interweave.",
+          "text": "Each thread is one weight. Brighter, thicker threads carry strong weights; faint ones barely matter. Cyan threads are positive; violet ones are negative.",
+          "html": "Each thread is one weight. Brighter, thicker threads carry strong weights; faint ones barely matter. Cyan threads are positive; violet ones are negative.",
+          "words": 23
+        },
+        {
+          "id": "4.3",
+          "stage": "The whole web brightens slightly, as if breathing in.",
+          "text": "Here's the heart of it. When people say a network \"learned\" something, this is what they mean. Everything it knows lives in these numbers: the weights, plus the biases.",
+          "html": "Here's the heart of it. When people say a network \"learned\" something, this is what they mean. Everything it knows lives in these numbers: the weights, plus the biases.",
+          "words": 29
+        },
+        {
+          "id": "4.4",
+          "stage": "The camera follows one bright thread from a top-bar pixel to its neuron, then pans across hundreds of others.",
+          "text": "But not in any single one. No thread here means \"seven,\" and no thread means \"top bar.\" The knowledge is spread across thousands of weights at once, the way a picture is spread across pixels.",
+          "html": "But not in any single one. No thread here means \"seven,\" and no thread means \"top bar.\" The knowledge is spread across thousands of weights at once, the way a picture is spread across pixels.",
+          "words": 35
+        },
+        {
+          "id": "4.5",
+          "stage": "Small amber pulses begin traveling along the brightest threads, from lit pixels toward the neurons, arriving at different times.",
+          "text": "Now watch the signal move. Each pulse is a pixel's brightness multiplied by a weight, flowing toward the neuron that adds them up.",
+          "html": "Now watch the signal move. Each pulse is a pixel's brightness multiplied by a weight, flowing toward the neuron that adds them up.",
+          "words": 23
+        },
+        {
+          "id": "4.6",
+          "stage": "Beside one neuron, its 784 incoming weights are laid out as a floating 28×28 heat map: a smudgy patch of cyan surrounded by violet.",
+          "text": "Here's a trick to see what one neuron is looking for. Lay its 784 weights back out on the 28 by 28 grid, and you get a picture of the pattern it responds to most.",
+          "html": "Here's a trick to see what one neuron is looking for. Lay its 784 weights back out on the 28 by 28 grid, and you get a picture of the pattern it responds to most.",
+          "words": 35
+        },
+        {
+          "id": "4.7",
+          "stage": "The heat map holds. Its edges are noisy and irregular.",
+          "text": "Often it's a smudgy blob, positive in one region and negative around it: a detector for \"ink here, but not there.\" Often it's hard to put into words at all.",
+          "html": "Often it's a smudgy blob, positive in one region and negative around it: a detector for \"ink here, but not there.\" Often it's hard to put into words at all.",
+          "words": 30
+        },
+        {
+          "id": "4.8",
+          "stage": "The camera pulls back to show the input web, and faintly, the smaller webs deeper in.",
+          "text": "Count every weight and bias in this network and you get about 26,000 numbers. That's the entire \"mind\" of the machine. It would fit in a spreadsheet.",
+          "html": "Count every weight and bias in this network and you get about 26,000 numbers. That's the entire \"mind\" of the machine. It would fit in a spreadsheet.",
+          "words": 27
+        },
+        {
+          "id": "4.9",
+          "stage": "The web flickers: for a moment the thread brightnesses rearrange completely, then snap back.",
+          "text": "A thought experiment: keep the wiring exactly the same but swap in different weights, and this same structure could recognize letters, or sketches of shoes. The wiring is the stage; the weights are the script.",
+          "html": "A thought experiment: keep the wiring exactly the same but swap in different weights, and this same structure could recognize letters, or sketches of shoes. The wiring is the stage; the weights are the script.",
+          "words": 35
+        },
+        {
+          "id": "4.10",
+          "stage": "The camera turns toward the first hidden layer and starts moving again.",
+          "text": "Nobody chose these values by hand. They started out random. Where they came from is the last stop on our tour. For now, let's go deeper.",
+          "html": "Nobody chose these values by hand. They started out random. Where they came from is the last stop on our tour. For now, let's go deeper.",
+          "words": 26
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "Deeper Layers",
+      "beats": [
+        {
+          "id": "5.1",
+          "stage": "The camera dives through the first hidden layer. Fog thickens. Ahead, 16 neurons sit in a tighter cluster. Palette deepens to blue-violet.",
+          "text": "Through the first hidden layer, and deeper. Sixteen neurons wait here, and each one listens not to pixels but to the thirty-two neurons behind us.",
+          "html": "Through the first hidden layer, and deeper. Sixteen neurons wait here, and each one listens not to pixels but to the thirty-two neurons behind us.",
+          "words": 25
+        },
+        {
+          "id": "5.2",
+          "stage": "A web of 512 connections links the two hidden layers, denser-looking but far fewer threads than before.",
+          "text": "Same three steps as before: weighted sum, bias, activation. Only the inputs have changed. Now they're the outputs of the previous layer.",
+          "html": "Same three steps as before: weighted sum, bias, activation. Only the inputs have changed. Now they're the outputs of the previous layer.",
+          "words": 22
+        },
+        {
+          "id": "5.3",
+          "stage": "Amber activity from the first hidden layer pulses forward along the connections. Most of the second-layer neurons ignite, 13 of 16.",
+          "text": "This is where stacking layers starts to pay off. Each layer can combine whatever the last one found.",
+          "html": "This is where stacking layers starts to pay off. Each layer can combine whatever the last one found.",
+          "words": 18
+        },
+        {
+          "id": "5.4",
+          "stage": "Ghostly overlays appear: small stroke fragments float near first-layer neurons, larger shapes near second-layer neurons.",
+          "text": "Here's the story people love to tell. The first layer finds small strokes: a short flat edge, a slanted line. The next layer combines strokes into parts, like a long top bar or a diagonal sweep.",
+          "html": "Here's the story people love to tell. The first layer finds small strokes: a short flat edge, a slanted line. The next layer combines strokes into parts, like a long top bar or a diagonal sweep.",
+          "words": 36
+        },
+        {
+          "id": "5.5",
+          "stage": "The fragments drift together and assemble into a faint, perfect 7.",
+          "text": "Then the final layer combines parts into whole digits. Top bar, plus diagonal, plus no closed loop anywhere: that's a seven.",
+          "html": "Then the final layer combines parts into whole digits. Top bar, plus diagonal, plus no closed loop anywhere: that's a seven.",
+          "words": 21
+        },
+        {
+          "id": "5.6",
+          "stage": "The perfect 7 flickers and breaks apart into noisy, abstract speckle patterns hovering near each neuron.",
+          "text": "I should be honest with you, though. That tidy story is the hope, not a guarantee. In a small network like this one, if you look at what each neuron responds to, you mostly find messy, hard-to-name patterns.",
+          "html": "I should be honest with you, though. That tidy story is the hope, not a guarantee. In a small network like this one, if you look at what each neuron responds to, you mostly find messy, hard-to-name patterns.",
+          "words": 38
+        },
+        {
+          "id": "5.7",
+          "stage": "The camera slowly circles the second layer, passing close to the speckled patterns.",
+          "text": "Nobody told the network to find edges or loops. It found whatever patterns happened to reduce its mistakes. Sometimes those resemble our ideas. Often they don't.",
+          "html": "Nobody told the network to find edges or loops. It found whatever patterns happened to reduce its mistakes. Sometimes those resemble our ideas. Often they don't.",
+          "words": 26
+        },
+        {
+          "id": "5.8",
+          "stage": "A brief inset of clean, striped edge-detector patterns appears, then fades.",
+          "text": "Larger networks built specially for images do tend to learn clear edge detectors in their first layers. And the core principle holds here too: each layer builds new features out of the previous layer's features.",
+          "html": "Larger networks built specially for images do tend to learn clear edge detectors in their first layers. And the core principle holds here too: each layer builds new features out of the previous layer's features.",
+          "words": 35
+        },
+        {
+          "id": "5.9",
+          "stage": "Light from the second layer gathers into streams flowing forward.",
+          "text": "It's a bit like twenty questions, where each round of questions is built from the answers to the last. Except here the answers aren't yes or no; they come in every shade in between.",
+          "html": "It's a bit like twenty questions, where each round of questions is built from the answers to the last. Except here the answers aren't yes or no; they come in every shade in between.",
+          "words": 34
+        },
+        {
+          "id": "5.10",
+          "stage": "Far ahead, ten larger spheres emerge from the fog in a row, still unlit.",
+          "text": "We're nearly at the end. Ahead: ten final neurons, one for each digit, zero through nine.",
+          "html": "We're nearly at the end. Ahead: ten final neurons, one for each digit, zero through nine.",
+          "words": 16
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "The Verdict",
+      "beats": [
+        {
+          "id": "6.1",
+          "stage": "The camera emerges into open space. Ten large spheres stand in a gentle arc, each faintly labeled with a digit, 0 to 9. The lighting is cool and still.",
+          "text": "The output layer. Ten neurons, labeled zero through nine. Each one produces a score: how strongly does the evidence point to this digit?",
+          "html": "The output layer. Ten neurons, labeled zero through nine. Each one produces a score: how strongly does the evidence point to this digit?",
+          "words": 23
+        },
+        {
+          "id": "6.2",
+          "stage": "Signals from the 16 neurons behind us flow into all ten spheres at once along 160 threads.",
+          "text": "Each listens to all sixteen neurons behind it, using the same weighted sum plus bias. But this time, there's no ReLU at the end.",
+          "html": "Each listens to all sixteen neurons behind it, using the same weighted sum plus bias. But this time, there's no ReLU at the end.",
+          "words": 24
+        },
+        {
+          "id": "6.3",
+          "stage": "Ten thin vertical bars rise beneath the spheres, uneven, then rescale so their heights clearly add up to one full bar.",
+          "text": "Instead, the ten raw scores go through one final step called softmax. It turns them into ten positive numbers that add up to exactly one: each digit's share of the confidence.",
+          "html": "Instead, the ten raw scores go through one final step called softmax. It turns them into ten positive numbers that add up to exactly one: each digit's share of the confidence.",
+          "words": 31
+        },
+        {
+          "id": "6.4",
+          "stage": "The tallest bar grows sharply while the shorter ones shrink.",
+          "text": "Softmax exaggerates differences. A score that's only somewhat higher than the rest gets a much bigger share. Think less of a fair vote and more of a spotlight swinging toward the leader.",
+          "html": "Softmax exaggerates differences. A score that's only somewhat higher than the rest gets a much bigger share. Think less of a fair vote and more of a spotlight swinging toward the leader.",
+          "words": 32
+        },
+        {
+          "id": "6.5",
+          "stage": "The spheres brighten in proportion to their probability. Most stay nearly dark. \"1\" glows faintly. \"7\" swells into brilliant warm amber; the bloom intensifies across the whole scene.",
+          "text": "And there it is. The seven blazes: ninety-nine percent, for this particular image.",
+          "html": "And there it is. The seven blazes: ninety-nine percent, for this particular image.",
+          "words": 13
+        },
+        {
+          "id": "6.6",
+          "stage": "The camera glides along the arc, past the faint \"1\" and the dark others.",
+          "text": "Look at the others. The runner-up is the one, with a sliver: about a third of a percent. That makes sense, since a seven is a bit like a one with a hat; the other eight split almost nothing.",
+          "html": "Look at the others. The runner-up is the one, with a sliver: about a third of a percent. That makes sense, since a seven is a bit like a one with a hat; the other eight split almost nothing.",
+          "words": 39
+        },
+        {
+          "id": "6.7",
+          "stage": "The camera turns to look back down the whole path: glowing pixels, the two hidden layers, the amber 7, connected by threads of light.",
+          "text": "Look back the way we came: 784 pixels, two hidden layers, about twenty-six thousand multiplications, all done in well under a millisecond. That is what \"seeing\" means for this network.",
+          "html": "Look back the way we came: 784 pixels, two hidden layers, about twenty-six thousand multiplications, all done in well under a millisecond. That is what \"seeing\" means for this network.",
+          "words": 30
+        },
+        {
+          "id": "6.8",
+          "stage": "The amber of the 7 pulses once, slightly less steady.",
+          "text": "One warning about that word \"confidence.\" Ninety-nine percent isn't a guarantee. It doesn't promise the network is right 99 times out of 100 when it says this.",
+          "html": "One warning about that word \"confidence.\" Ninety-nine percent isn't a guarantee. It doesn't promise the network is right 99 times out of 100 when it says this.",
+          "words": 27
+        },
+        {
+          "id": "6.9",
+          "stage": "A random scribble flashes onto the input grid; the output layer still lights up: the \"8\" glows at 80%.",
+          "text": "Networks can be confidently wrong. Show this one a random scribble and it says \"eight,\" eighty percent sure, because it must hand back ten numbers that add up to one. It has no answer for \"none of the above.\"",
+          "html": "Networks can be confidently wrong. Show this one a random scribble and it says \"eight,\" eighty percent sure, because it must hand back ten numbers that add up to one. It has no answer for \"none of the above.\"",
+          "words": 39
+        },
+        {
+          "id": "6.10",
+          "stage": "The amber fades back to blue. Every connection in the network dims to a uniform faint grey.",
+          "text": "So how did it get good enough to be right? Let's rewind, to before it knew anything at all.",
+          "html": "So how did it get good enough to be right? Let's rewind, to before it knew anything at all.",
+          "words": 19
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "How It Learned",
+      "beats": [
+        {
+          "id": "7.1",
+          "stage": "Scene reset: every connection flickers to a random brightness, a chaotic, evenly dim tangle. The palette desaturates.",
+          "text": "Before training, every weight was random. Same wiring, same seven going in, but what comes out is noise.",
+          "html": "Before training, every weight was random. Same wiring, same seven going in, but what comes out is noise.",
+          "words": 18
+        },
+        {
+          "id": "7.2",
+          "stage": "The same 7 flows through. The output layer lights up as a muddle: \"5\" is brightest at 14%, the rest close behind, \"7\" at 10%.",
+          "text": "The network says: maybe a five? Fourteen percent. It's guessing, no better than rolling a ten-sided die.",
+          "html": "The network says: maybe a five? Fourteen percent. It's guessing, no better than rolling a ten-sided die.",
+          "words": 17
+        },
+        {
+          "id": "7.2b",
+          "stage": "A small tag flips over on the input digit, revealing a handwritten \"7\" on the back like an answer key. The \"7\" output sphere pulses once.",
+          "text": "How does it know that guess was wrong? Because every training image came with a label: someone wrote the correct answer on the back. This one says seven.",
+          "html": "How does it know that guess was wrong? Because every training image came with a label: someone wrote the correct answer on the back. This one says seven.",
+          "words": 28
+        },
+        {
+          "id": "7.3",
+          "stage": "A single number appears above the output layer, large and pulsing red-orange: the loss.",
+          "text": "To improve, it first needs to measure how wrong it was. That measure is called the loss: a single number that's big when the network gives the right answer low confidence, and small when it gives it high confidence.",
+          "html": "To improve, it first needs to measure how wrong it was. That measure is called the loss: a single number that's big when the network gives the right answer low confidence, and small when it gives it high confidence.",
+          "words": 39
+        },
+        {
+          "id": "7.4",
+          "stage": "The \"7\" sphere, dim at 10%, is highlighted; the loss number swells.",
+          "text": "The right answer was seven, and it gave seven about ten percent, no better than a blind guess. Big loss.",
+          "html": "The right answer was seven, and it gave seven about ten percent, no better than a blind guess. Big loss.",
+          "words": 20
+        },
+        {
+          "id": "7.5",
+          "stage": "The scene abstracts: a vast, foggy landscape of hills and valleys forms beneath the camera. A single glowing marker sits high on a slope.",
+          "text": "Now picture every possible setting of the weights as a spot on a landscape, where height is the loss. Training means finding low ground.",
+          "html": "Now picture every possible setting of the weights as a spot on a landscape, where height is the loss. Training means finding low ground.",
+          "words": 24
+        },
+        {
+          "id": "7.6",
+          "stage": "Fog rolls in thick around the marker; only the ground right beneath it is visible.",
+          "text": "But you're standing in thick fog. You can't see the valley. You can only feel which way the ground slopes under your feet, so you take a small step downhill, then feel again.",
+          "html": "But you're standing in thick fog. You can't see the valley. You can only feel which way the ground slopes under your feet, so you take a small step downhill, then feel again.",
+          "words": 33
+        },
+        {
+          "id": "7.7",
+          "stage": "The marker steps downhill, pauses, steps again, each step a little shorter as the slope eases.",
+          "text": "That's gradient descent. The gradient tells you, for each weight, which way and how steeply the loss changes if you nudge it. Then you step the opposite way.",
+          "html": "That's gradient descent. The gradient tells you, for each weight, which way and how steeply the loss changes if you nudge it. Then you step the opposite way.",
+          "words": 28
+        },
+        {
+          "id": "7.8",
+          "stage": "The landscape ripples, as if hinting at far more dimensions than it can show.",
+          "text": "Here's where the picture breaks down: this landscape doesn't have two directions to walk in. It has about 26,000, one per weight and bias. Nobody can picture that; the math doesn't mind.",
+          "html": "Here's where the picture breaks down: this landscape doesn't have two directions to walk in. It has about 26,000, one per weight and bias. Nobody can picture that; the math doesn't mind.",
+          "words": 32
+        },
+        {
+          "id": "7.9",
+          "stage": "The landscape dissolves back into the network. A wave of red-orange light starts at the output layer and travels backward, toward the input.",
+          "text": "But how do you find the slope for 26,000 weights at once? That's backpropagation. You start at the output, where the error is, and work backward.",
+          "html": "But how do you find the slope for 26,000 weights at once? That's backpropagation. You start at the output, where the error is, and work backward.",
+          "words": 26
+        },
+        {
+          "id": "7.10",
+          "stage": "The backward wave splits at each neuron and spreads across the connections, brighter on some threads than others.",
+          "text": "Each weight gets its share of the blame, according to how much it contributed to the mistake. Under the hood, this is the chain rule from calculus, applied layer by layer.",
+          "html": "Each weight gets its share of the blame, according to how much it contributed to the mistake. Under the hood, this is the chain rule from calculus, applied layer by layer.",
+          "words": 31
+        },
+        {
+          "id": "7.11",
+          "stage": "Thousands of connections shift their brightness very slightly. The \"7\" output brightens a hair.",
+          "text": "Then every weight moves a tiny step in the direction that would have made the mistake smaller. (In practice, the nudges are averaged over a small batch of examples first.)",
+          "html": "Then every weight moves a tiny step in the direction that would have made the mistake smaller. (In practice, the nudges are averaged over a small batch of examples first.)",
+          "words": 30
+        },
+        {
+          "id": "7.12",
+          "stage": "Time-lapse: thousands of different handwritten digits stream through the input grid in a blur. The tangle of connections steadily reorganizes into structured patterns. The palette warms back toward cyan and blue.",
+          "text": "Now repeat with sixty thousand handwritten digits, again and again. No single step teaches it what a seven is, but thousands of small corrections add up.",
+          "html": "Now repeat with sixty thousand handwritten digits, again and again. No single step teaches it what a seven is, but thousands of small corrections add up.",
+          "words": 26
+        },
+        {
+          "id": "7.13",
+          "stage": "The output for the 7 climbs steadily: 10%, 22%, 50%, 77%, 91%, 99%.",
+          "text": "Slowly, the weights settle into the patterns we flew through tonight.",
+          "html": "Slowly, the weights settle into the patterns we flew through tonight.",
+          "words": 11
+        },
+        {
+          "id": "7.14",
+          "stage": "New digits, never seen before, flow through; small checkmarks appear for most, a few red marks for misses.",
+          "text": "Then the real test: digits it has never seen. A network that merely memorized its examples would stumble here. This one gets about 96 out of 100 right.",
+          "html": "Then the real test: digits it has never seen. A network that merely memorized its examples would stumble here. This one gets about 96 out of 100 right.",
+          "words": 28
+        },
+        {
+          "id": "7.15",
+          "stage": "The camera pulls back further and further. The whole network shrinks into a single faint point of light in the dark: the same light from the opening.",
+          "text": "So how does a machine learn to see a seven? Nobody hands it the rules. It's shown examples with the answers attached, then it guesses, measures how wrong it was, adjusts, and repeats, thousands of times over.",
+          "html": "So how does a machine learn to see a seven? Nobody hands it the rules. It's shown examples with the answers attached, then it guesses, measures how wrong it was, adjusts, and repeats, thousands of times over.",
+          "words": 37
+        },
+        {
+          "id": "7.16",
+          "stage": "Black. The single light pulses once, slowly.",
+          "text": "That faint light we started with? It was this whole network, seen from far away. Everything you passed tonight was just numbers, shaped by examples.",
+          "html": "That faint light we started with? It was this whole network, seen from far away. Everything you passed tonight was just numbers, shaped by examples.",
+          "words": 25
+        },
+        {
+          "id": "7.17",
+          "stage": "The light fades. An end card appears.",
+          "text": "Thanks for flying with me.",
+          "html": "Thanks for flying with me.",
+          "words": 5
+        }
+      ]
+    }
+  ]
+}
