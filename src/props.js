@@ -5,7 +5,11 @@
  */
 import {
   AdditiveBlending,
+  BufferGeometry,
   CanvasTexture,
+  Float32BufferAttribute,
+  Line,
+  LineBasicMaterial,
   Group,
   Mesh,
   MeshBasicMaterial,
@@ -17,6 +21,62 @@ import {
   Vector3,
 } from 'three';
 import { PALETTE } from './network.js';
+import { motion } from './config.js';
+
+/**
+ * Beat 4.6: the first-layer neuron whose incoming weights are shown as a heat map.
+ * Neuron 8 has one of the most spatially structured weight pictures of the 32: a cyan
+ * (positive) blob left of centre with violet (negative) weights curving around it,
+ * which is what beat 4.7 describes. Most others read closer to noise.
+ */
+export const HEATMAP_NEURON = 8;
+const HEATMAP_SIZE = 7.5; // world units
+
+/**
+ * Panel texture for the heat map: 28x28 real weights, normalised so the strongest
+ * (99th percentile of |w|) are brightest and near-zero weights fade to dark.
+ */
+function heatmapTexture(weights, neuron) {
+  const abs = Array.from(weights, Math.abs).sort((a, b) => a - b);
+  const scale = abs[Math.floor(abs.length * 0.99)] || 1;
+  const W = 300;
+  const H = 352;
+  const cell = 10;
+  const pad = 10;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(3,8,18,0.9)';
+  ctx.strokeStyle = 'rgba(140,205,255,0.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(1, 1, W - 2, H - 2, 10);
+  ctx.fill();
+  ctx.stroke();
+  for (let i = 0; i < 784; i++) {
+    const v = Math.max(-1, Math.min(1, weights[i] / scale));
+    const a = Math.pow(Math.abs(v), 0.85);
+    // Kept below full brightness so the panel reads clearly without blowing out the bloom.
+    const [r, g, b] = v >= 0 ? [80, 205, 245] : [145, 95, 245];
+    ctx.fillStyle = `rgb(${Math.round(r * a)},${Math.round(g * a)},${Math.round(b * a)})`;
+    ctx.fillRect(pad + (i % 28) * cell, pad + Math.floor(i / 28) * cell, cell, cell);
+  }
+  ctx.font = '600 15px system-ui, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(200,230,255,0.85)';
+  ctx.fillText(`NEURON ${neuron} · 784 WEIGHTS`, pad, 312);
+  ctx.font = '500 14px system-ui, sans-serif';
+  ctx.fillStyle = 'rgb(80,205,245)';
+  ctx.fillText('■ positive', pad, 334);
+  ctx.fillStyle = 'rgb(145,95,245)';
+  ctx.fillText('■ negative', pad + 100, 334);
+  ctx.fillStyle = 'rgba(160,185,210,0.8)';
+  ctx.fillText('dark ≈ 0', pad + 205, 334);
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = SRGBColorSpace;
+  return { tex, aspect: H / W };
+}
 
 /** Upscaled, glowing texture from a 28x28 image (values 0..1, or signed for weights). */
 function imageTexture(values, { signed = false, size = 112, tint = [150, 230, 255] } = {}) {
@@ -248,6 +308,39 @@ export class Props {
     this.tag.visible = false;
     scene.add(this.tag);
 
+    /* 4.6-4.7: one neuron's 784 real weights as a floating 28x28 heat map, beside it. */
+    {
+      const W = net.params.trained[0].W;
+      const col = new Float32Array(784);
+      for (let i = 0; i < 784; i++) col[i] = W[i * 32 + HEATMAP_NEURON];
+      const { tex, aspect } = heatmapTexture(col, HEATMAP_NEURON);
+      const n = view.position(1, HEATMAP_NEURON);
+      this.heatmap = new Sprite(new SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false }));
+      this.heatmap.material.color.setScalar(0.9);
+      this.heatmapScale = new Vector3(HEATMAP_SIZE, HEATMAP_SIZE * aspect, 1);
+      this.heatmap.scale.copy(this.heatmapScale);
+      // To the outer side of the neuron (it sits in the layer's left column), clear of the others.
+      const side = n[0] <= 0 ? -1 : 1;
+      this.heatmap.position.set(n[0] + side * (HEATMAP_SIZE / 2 + 2.6), n[1], n[2] + 1);
+      this.heatmap.visible = false;
+      scene.add(this.heatmap);
+      // A faint tether from the panel to its neuron.
+      const g = new BufferGeometry();
+      g.setAttribute('position', new Float32BufferAttribute([
+        n[0] + side * 2.6, n[1], n[2] + 1, n[0] + side * 1.05, n[1], n[2], ], 3));
+      this.tether = new Line(g, new LineBasicMaterial({ color: 0x7fd4ff, transparent: true, opacity: 0, depthWrite: false }));
+      this.tether.visible = false;
+      scene.add(this.tether);
+      // A faint ring marks which neuron the panel belongs to.
+      this.heatRing = new Mesh(
+        new TorusGeometry(1.45, 0.04, 6, 48),
+        new MeshBasicMaterial({ color: 0x7fd4ff, transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false }),
+      );
+      this.heatRing.position.set(n[0], n[1], n[2]);
+      this.heatRing.visible = false;
+      scene.add(this.heatRing);
+    }
+
     /* 7.3: the loss, a real number: -ln(p("7")) for the untrained network. */
     const pUntrained = net.runs.untrained[3][7];
     this.lossValue = -Math.log(pUntrained);
@@ -303,5 +396,12 @@ export class Props {
     this.tag.rotation.y = Math.PI * p.tagFlip;
 
     setAlpha(this.loss, p.loss);
+
+    setAlpha(this.heatmap, p.heatmap);
+    setAlpha(this.tether, p.heatmap * 0.5);
+    setAlpha(this.heatRing, p.heatmap * 0.7);
+    // Settles in from slightly smaller as it fades in (no scaling with reduced motion).
+    const grow = motion.reduced ? 1 : 0.92 + 0.08 * p.heatmap;
+    this.heatmap.scale.set(this.heatmapScale.x * grow, this.heatmapScale.y * grow, 1);
   }
 }

@@ -10,6 +10,7 @@
  */
 import { Color } from 'three';
 import { motion } from './config.js';
+import { HEATMAP_NEURON } from './props.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const smooth = (t) => t * t * (3 - 2 * t);
@@ -76,7 +77,7 @@ export class Director {
       props: {
         ghosts: 0, ghostT: 0, biasRing: 0, biasAngle: 0, spark: 0, sparkT: 0,
         fragments: 0, assemble: 0, perfect7: 0, weightMaps: 0, gabors: 0,
-        tag: 0, tagFlip: 0, loss: 0,
+        tag: 0, tagFlip: 0, loss: 0, heatmap: 0,
       },
       bars: { alpha: 0, rise: 0, morph: 0, sum: 0, temp: 0, amber: 0 },
       mood: { bg: new Color(), fog: 0.004, bloom: 1, bloomRadius: 0.55 },
@@ -147,6 +148,8 @@ export class Director {
     this.tag = T([['7.2b', 0, 0], ['7.2b', 0.15, 1], ['7.4', 1, 1], ['7.5', 0.2, 0]]);
     this.tagFlip = T([['7.2b', 0.2, 0], ['7.2b', 0.5, 1]]);
     this.loss = T([['7.3', 0.1, 0], ['7.3', 0.35, 1], ['7.4', 1, 1], ['7.5', 0.3, 0]]);
+    // 4.6 heat map: fades in as the camera arrives, holds through 4.7, fades as it pulls back.
+    this.heatmap = T([['4.5', 0.85, 0], ['4.6', 0.3, 1], ['4.7', 0.85, 1], ['4.8', 0.2, 0]]);
     this.back = T([['7.9', 0.1, 0], ['7.9', 0.2, 1], ['7.10', 0.95, 1], ['7.11', 0.1, 0]]);
     this.backG = T([['7.9', 0.2, 0], ['7.10', 0.9, 3]], { ease: false });
 
@@ -206,6 +209,7 @@ export class Director {
     const v = this.view;
     const F = v.position(1, v.focusIndex);
     const f = (dx, dy, dz) => [F[0] + dx, F[1] + dy, F[2] + dz];
+    const H = v.position(1, HEATMAP_NEURON);
     const out7 = v.position(3, 7);
     const out1 = v.position(3, 1);
     // A bright top-bar pixel feeding the focus neuron, for following "one bright thread" (4.4).
@@ -256,8 +260,9 @@ export class Director {
       K('4.4', 0.3, along(0.12, 3, 3, 6), [...F]),
       K('4.4', 0.8, along(0.7, 5, 4, 4), [...F]),
       K('4.5', 0.6, [16, 8, 8], [0, 0, -22]),
-      K('4.6', 0.6, f(8, 4, 14), [...F]),
-      K('4.7', 0.6, f(5, 3, 12), [...F]),
+      // 4.6-4.7 frame the heat-map neuron and its weight panel (to its outer side).
+      K('4.6', 0.6, [H[0] - 2.5, H[1] + 1, H[2] + 20], [H[0] - 4.2, H[1] - 1.6, H[2]]),
+      K('4.7', 0.6, [H[0] - 5.5, H[1] + 0.5, H[2] + 18.5], [H[0] - 4.4, H[1] - 1.6, H[2]]),
       K('4.8', 0.6, [34, 22, 22], [0, 0, -45]),
       K('4.9', 0.6, [26, 14, 8], [0, 0, -30]),
       K('4.10', 0.7, [0, 4, -22], [0, 0, -45]),
@@ -388,6 +393,7 @@ export class Director {
     s.props.tag = this.tag.at(p);
     s.props.tagFlip = this.tagFlip.at(p);
     s.props.loss = this.loss.at(p);
+    s.props.heatmap = this.heatmap.at(p);
     this._outputs(p, mix);
 
     /* chapter 5 props */
