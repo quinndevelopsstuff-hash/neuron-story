@@ -4,7 +4,9 @@ A guided, scroll-driven tour through a small neural network as it recognizes a h
 
 **The network we fly through** (used consistently in narration and scene):
 784 inputs (28×28 pixels) → 32 hidden neurons → 16 hidden neurons → 10 outputs.
-ReLU activations in the hidden layers, softmax at the output. About 26,000 weights and biases in total.
+ReLU activations in the hidden layers, softmax at the output. 25,818 weights and biases in total ("about 26,000").
+
+**All figures are real.** The network was trained on MNIST with `training/train.py` (NumPy, 15 epochs, fixed seed). The hero image is MNIST test image #2480. Its probabilities, the untrained network's guess, the training curve, the scribble result and the 96% test accuracy all come from that run (`public/data/network.json`).
 
 **Format:** each beat has an ID, a stage direction in `[brackets]` (what the 3D scene does), and 1–3 sentences of narration. Beats appear one at a time as the viewer scrolls.
 
@@ -161,9 +163,9 @@ That's the whole recipe: weighted sum, plus bias, through the activation. This n
 Why bother with that last step? Without it, the whole network, however many layers deep, would collapse into one big weighted sum. That bend at zero is what lets layers build on each other.
 
 ### 3.10
-[The camera pulls back. Across the layer, about a third of the neurons flare amber at different intensities; the rest stay dark blue.]
+[The camera pulls back. Across the layer, 22 of the 32 neurons flare amber at different intensities; the other 10 stay dark blue.]
 
-Now zoom out. All thirty-two did the same thing, each with its own weights. A few fired strongly, some weakly, many not at all.
+Now zoom out. All thirty-two did the same thing, each with its own weights. Some fired strongly, some weakly, and ten not at all.
 
 ### 3.11
 [The layer settles into a quiet shimmer.]
@@ -239,7 +241,7 @@ Through the first hidden layer, and deeper. Sixteen neurons wait here, and each 
 Same three steps as before: weighted sum, bias, activation. Only the inputs have changed. Now they're the outputs of the previous layer.
 
 ### 5.3
-[Amber activity from the first hidden layer pulses forward along the connections. A handful of second-layer neurons ignite.]
+[Amber activity from the first hidden layer pulses forward along the connections. Most of the second-layer neurons ignite, 13 of 16.]
 
 This is where stacking layers starts to pay off. Each layer can combine whatever the last one found.
 
@@ -305,12 +307,12 @@ Softmax exaggerates differences. A score that's only somewhat higher than the re
 ### 6.5
 [The spheres brighten in proportion to their probability. Most stay nearly dark. "1" glows faintly. "7" swells into brilliant warm amber; the bloom intensifies across the whole scene.]
 
-And there it is. The seven blazes: ninety-eight percent, for this particular image.
+And there it is. The seven blazes: ninety-nine percent, for this particular image.
 
 ### 6.6
 [The camera glides along the arc, past the faint "1" and the dark others.]
 
-Look at the others. The one gets a sliver, about one percent; that makes sense, since a seven is a bit like a one with a hat. The other eight share what's left.
+Look at the others. The runner-up is the one, with a sliver: about a third of a percent. That makes sense, since a seven is a bit like a one with a hat; the other eight split almost nothing.
 
 ### 6.7
 [The camera turns to look back down the whole path: glowing pixels, the two hidden layers, the amber 7, connected by threads of light.]
@@ -320,12 +322,12 @@ Look back the way we came: 784 pixels, two hidden layers, about twenty-six thous
 ### 6.8
 [The amber of the 7 pulses once, slightly less steady.]
 
-One warning about that word "confidence." Ninety-eight percent isn't a guarantee. It doesn't promise the network is right 98 times out of 100 when it says this.
+One warning about that word "confidence." Ninety-nine percent isn't a guarantee. It doesn't promise the network is right 99 times out of 100 when it says this.
 
 ### 6.9
-[A random scribble flashes onto the input grid; the output layer still lights up, one digit glowing confidently.]
+[A random scribble flashes onto the input grid; the output layer still lights up: the "8" glows at 80%.]
 
-Networks can be confidently wrong. Show this one a random scribble and it will still hand you ten numbers that add up to one, because that's all it can do. It has no answer for "none of the above."
+Networks can be confidently wrong. Show this one a random scribble and it says "eight," eighty percent sure, because it must hand back ten numbers that add up to one. It has no answer for "none of the above."
 
 ### 6.10
 [The amber fades back to blue. Every connection in the network dims to a uniform faint grey.]
@@ -342,9 +344,14 @@ So how did it get good enough to be right? Let's rewind, to before it knew anyth
 Before training, every weight was random. Same wiring, same seven going in, but what comes out is noise.
 
 ### 7.2
-[The same 7 flows through. The output layer lights up as a muddle: "3" is brightest at 14%, the rest close behind, "7" at 9%.]
+[The same 7 flows through. The output layer lights up as a muddle: "5" is brightest at 14%, the rest close behind, "7" at 10%.]
 
-The network says: maybe a three? Fourteen percent. It's guessing, barely better than rolling a ten-sided die.
+The network says: maybe a five? Fourteen percent. It's guessing, no better than rolling a ten-sided die.
+
+### 7.2b
+[A small tag flips over on the input digit, revealing a handwritten "7" on the back like an answer key. The "7" output sphere pulses once.]
+
+How does it know that guess was wrong? Because every training image came with a label: someone wrote the correct answer on the back. This one says seven.
 
 ### 7.3
 [A single number appears above the output layer, large and pulsing red-orange: the loss.]
@@ -352,9 +359,9 @@ The network says: maybe a three? Fourteen percent. It's guessing, barely better 
 To improve, it first needs to measure how wrong it was. That measure is called the loss: a single number that's big when the network gives the right answer low confidence, and small when it gives it high confidence.
 
 ### 7.4
-[The "7" sphere, dim at 9%, is highlighted; the loss number swells.]
+[The "7" sphere, dim at 10%, is highlighted; the loss number swells.]
 
-The right answer was seven, and it gave seven just nine percent. Big loss.
+The right answer was seven, and it gave seven about ten percent, no better than a blind guess. Big loss.
 
 ### 7.5
 [The scene abstracts: a vast, foggy landscape of hills and valleys forms beneath the camera. A single glowing marker sits high on a slope.]
@@ -397,19 +404,19 @@ Then every weight moves a tiny step in the direction that would have made the mi
 Now repeat with sixty thousand handwritten digits, again and again. No single step teaches it what a seven is, but thousands of small corrections add up.
 
 ### 7.13
-[The output for the 7 climbs steadily: 9%, 30%, 70%, 98%.]
+[The output for the 7 climbs steadily: 10%, 22%, 50%, 77%, 91%, 99%.]
 
 Slowly, the weights settle into the patterns we flew through tonight.
 
 ### 7.14
 [New digits, never seen before, flow through; small checkmarks appear for most, a few red marks for misses.]
 
-Then the real test: digits it has never seen. A network that merely memorized its examples would stumble here. This one gets about 97 out of 100 right.
+Then the real test: digits it has never seen. A network that merely memorized its examples would stumble here. This one gets about 96 out of 100 right.
 
 ### 7.15
 [The camera pulls back further and further. The whole network shrinks into a single faint point of light in the dark: the same light from the opening.]
 
-So how does a machine learn to see a seven? Nobody tells it. It guesses, measures how wrong it was, adjusts, and repeats, thousands of times over.
+So how does a machine learn to see a seven? Nobody hands it the rules. It's shown examples with the answers attached, then it guesses, measures how wrong it was, adjusts, and repeats, thousands of times over.
 
 ### 7.16
 [Black. The single light pulses once, slowly.]

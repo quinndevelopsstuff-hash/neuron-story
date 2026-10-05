@@ -1,0 +1,6 @@
+node_modules/
+dist/
+training/data/
+__pycache__/
+.DS_Store
+.vercel
