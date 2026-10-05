@@ -11,6 +11,7 @@
 import { Color } from 'three';
 import { motion } from './config.js';
 import { HEATMAP_NEURON } from './props.js';
+import { LANDSCAPE } from './landscape.js';
 
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const smooth = (t) => t * t * (3 - 2 * t);
@@ -96,6 +97,7 @@ export class Director {
         tag: 0, tagFlip: 0, loss: 0, heatmap: 0, pairLinks: 0,
       },
       bars: { alpha: 0, rise: 0, morph: 0, sum: 0, temp: 0, amber: 0 },
+      land: { alpha: 0, rise: 0, tight: 0, step: 0, ripple: 0, ghost: 0, arrow: 0, marker: 0, phase: 0 },
       mood: { bg: new Color(), fog: 0.004, bloom: 1, bloomRadius: 0.55 },
     };
 
@@ -155,7 +157,18 @@ export class Director {
       width: T([['intro', 0, 1]]),
     };
     // Network recedes while the (pass 2) loss landscape is shown.
-    this.netDim = T([['7.5', 0, 1], ['7.5', 0.4, 0.35], ['7.8', 0.8, 0.35], ['7.9', 0.3, 1]]);
+    // 7.5-7.8: the network dissolves into the loss landscape, and re-forms at 7.9.
+    this.netDim = T([['7.5', 0, 1], ['7.5', 0.35, 0], ['7.8', 0.85, 0], ['7.9', 0.3, 1]]);
+    this.land = {
+      alpha: T([['7.4', 0.95, 0], ['7.5', 0.3, 1], ['7.8', 0.9, 1], ['7.9', 0.25, 0]]),
+      rise: T([['7.5', 0.05, 0], ['7.5', 0.5, 1], ['7.8', 0.95, 1], ['7.9', 0.25, 0]]),   // flat grid -> hills
+      marker: T([['7.5', 0.25, 0], ['7.5', 0.5, 1], ['7.8', 0.9, 1], ['7.9', 0.2, 0]]),
+      tight: T([['7.5', 0.9, 0], ['7.6', 0.35, 1], ['7.7', 0.1, 1], ['7.7', 0.4, 0.6], ['7.7', 0.95, 0.6], ['7.8', 0.25, 0]]),
+      arrow: T([['7.6', 0.35, 0], ['7.6', 0.6, 1], ['7.7', 0.95, 1], ['7.8', 0.1, 0]]),
+      step: T([['7.7', 0.08, 0], ['7.7', 0.92, LANDSCAPE.STEPS]], { ease: false }),
+      ripple: T([['7.8', 0.05, 0], ['7.8', 0.3, 1], ['7.8', 0.85, 1], ['7.9', 0.15, 0]]),
+      ghost: T([['7.8', 0.2, 0], ['7.8', 0.45, 1], ['7.8', 0.85, 1], ['7.9', 0.1, 0]]),
+    };
 
     /* ---------------- chapter 6/7: verdict, untrained, learning ---------------- */
     this.scribble = T([['6.9', 0, 0], ['6.9', 0.2, 1], ['6.9', 0.85, 1], ['6.10', 0.1, 0]]);
@@ -228,9 +241,9 @@ export class Director {
       M('6.9', 0.5, 0x02060b, 0.0055, 1.1),
       M('6.10', 0.6, 0x040506, 0.006, 0.9),
       M('7.2', 0.5, 0x050506, 0.006, 0.9),
-      M('7.5', 0.5, 0x07080b, 0.012, 0.9),
-      M('7.6', 0.5, 0x07080b, 0.02, 0.9),
-      M('7.8', 0.6, 0x07080b, 0.012, 0.9),
+      M('7.5', 0.5, 0x03060b, 0.0075, 0.85),
+      M('7.6', 0.5, 0x03060b, 0.009, 0.85),
+      M('7.8', 0.6, 0x03060b, 0.0075, 0.85),
       M('7.9', 0.5, 0x060406, 0.006, 1.0),
       M('7.12', 0.6, 0x02060c, 0.006, 1.1),
       M('7.14', 0.6, 0x02060c, 0.006, 1.1),
@@ -247,6 +260,10 @@ export class Director {
     const F = v.position(1, v.focusIndex);
     const f = (dx, dy, dz) => [F[0] + dx, F[1] + dy, F[2] + dz];
     const H = v.position(1, HEATMAP_NEURON);
+    // Loss-landscape marker start and the middle of its descent, in world space.
+    const { CENTER, START, terrainHeight } = LANDSCAPE;
+    const LS = [START[0] + CENTER.x, terrainHeight(START[0], START[1]) + CENTER.y, START[1] + CENTER.z];
+    const LM = [-3 + CENTER.x, terrainHeight(-3, 2) + CENTER.y, 2 + CENTER.z];
     const out7 = v.position(3, 7);
     const out1 = v.position(3, 1);
     // A bright top-bar pixel feeding the focus neuron, for following "one bright thread" (4.4).
@@ -337,10 +354,11 @@ export class Director {
       K('7.2b', 0.6, [28, 8, 30], [8, 4, -8]),
       K('7.3', 0.6, [0, 6, -84], [0, 3, -100]),
       K('7.4', 0.6, [out7[0], 3, -87], [out7[0], 1, -100]),
-      K('7.5', 0.6, [0, 70, -20], [0, 0, -62]),
-      K('7.6', 0.6, [0, 55, -40], [0, 0, -70]),
-      K('7.7', 0.6, [10, 52, -50], [0, 0, -72]),
-      K('7.8', 0.6, [0, 64, -60], [0, 0, -64]),
+      // Loss landscape: wide view, then close on the marker, then the whole descent, then overview.
+      K('7.5', 0.6, [-55, 38, 5], [-5, -24, -60]),
+      K('7.6', 0.6, [LS[0] - 14, LS[1] + 19, LS[2] + 20], LS),
+      K('7.7', 0.6, [LM[0] - 36, LM[1] + 42, LM[2] + 40], [LM[0] - 3, LM[1] + 2, LM[2] - 2]),
+      K('7.8', 0.6, [-30, 40, 30], [0, -26, -60]),
       K('7.9', 0.6, [55, 10, -55], [0, 0, -50]),
       K('7.10', 0.6, [52, 8, -45], [0, 0, -50]),
       K('7.11', 0.6, [48, 10, -30], [0, 0, -50]),
@@ -373,7 +391,14 @@ export class Director {
 
     const netDim = this.netDim.at(p);
     const vis = this.vis.at(p);
-    s.vis[0] = s.vis[1] = s.vis[2] = s.vis[3] = vis * (0.6 + 0.4 * netDim);
+    s.vis[0] = s.vis[1] = s.vis[2] = s.vis[3] = vis * netDim;
+    const L = this.land;
+    const land = s.land;
+    for (const key in L) land[key] = L[key].at(p);
+    if (reduced) land.ghost *= 0.6;
+    // Ripple phase: gentle motion over time, or tied to scroll alone with reduced motion.
+    const b78 = this.tl.get('7.8');
+    land.phase = reduced ? ((p - b78.start) / (b78.end - b78.start)) * 5 : time * 1.3;
 
     /* chapter 2 */
     s.demoPixel = this.demoPixel.at(p);
