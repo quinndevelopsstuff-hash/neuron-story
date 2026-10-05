@@ -346,7 +346,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transpa
 .tl-tests .slot.miss canvas { border-color: rgba(255, 106, 61, 0.85); }
 .tl-tests .tally { font-size: 0.78rem; color: var(--ink); }
 
-/* ---------- copyright (bottom of the screen, with the end card) ---------- */
+/* ---------- copyright (bottom of the screen, shown with the auto-play controls) ---------- */
 .copyright {
   position: fixed;
   left: var(--gutter);
@@ -358,7 +358,12 @@ html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transpa
   color: var(--ink-dim);
   font-variant-emoji: text; /* keep © as a text glyph, never the emoji */
   opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0.4s;
 }
+.autoplay-on .copyright { opacity: 0.8; visibility: visible; }
+/* Keep the narration panel clear of the footer on short screens. */
+.autoplay-on .narration { bottom: max(7vh, calc(env(safe-area-inset-bottom) + 54px)); }
 
 /* ---------- end card ---------- */
 .end-card {
@@ -413,5 +418,5 @@ html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transpa
 
 @media (prefers-reduced-motion: reduce) {
   .chevron { animation: none; opacity: 0.9; }
-  .chapter-label, .intro .hint, .marker::before, .autoplay-controls { transition: none; }
+  .chapter-label, .intro .hint, .marker::before, .autoplay-controls, .copyright { transition: none; }
 }
