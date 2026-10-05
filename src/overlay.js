@@ -102,6 +102,12 @@ export class Overlay {
     });
     root.appendChild(bar);
 
+    // Copyright line, pinned to the bottom of the screen; fades in with the end card.
+    // &copy; is the plain text symbol (not the emoji variant); CSS also asks for text presentation.
+    this.copyright = el('footer', 'copyright', 'Copyright &copy; 2026 Quinn Koscielak');
+    this.copyright.style.visibility = 'hidden';
+    root.appendChild(this.copyright);
+
     this.chapterLabel = el('div', 'chapter-label');
     this.chapterLabel.setAttribute('aria-hidden', 'true');
     root.appendChild(this.chapterLabel);
@@ -180,6 +186,10 @@ export class Overlay {
   _set(item, o) {
     if (Math.abs(o - item.opacity) < 0.002) return;
     item.opacity = o;
+    if (item.seg.type === 'end') {
+      this.copyright.style.opacity = o.toFixed(3);
+      this.copyright.style.visibility = o > 0.001 ? 'visible' : 'hidden';
+    }
     const s = item.node.style;
     s.opacity = o.toFixed(3);
     s.visibility = o > 0.001 ? 'visible' : 'hidden';

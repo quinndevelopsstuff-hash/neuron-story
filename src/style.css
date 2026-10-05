@@ -365,6 +365,20 @@ html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transpa
 .tl-tests .slot.miss canvas { border-color: rgba(255, 106, 61, 0.85); }
 .tl-tests .tally { font-size: 0.78rem; color: var(--ink); }
 
+/* ---------- copyright (bottom of the screen, with the end card) ---------- */
+.copyright {
+  position: fixed;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: calc(env(safe-area-inset-bottom) + 18px);
+  text-align: center;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+  font-variant-emoji: text; /* keep © as a text glyph, never the emoji */
+  opacity: 0;
+}
+
 /* ---------- end card ---------- */
 .end-card {
   position: fixed;
