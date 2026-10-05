@@ -9,6 +9,8 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
+Click **Auto-play** on the title screen for a hands-free ~10-minute run (space toggles, 1x/1.5x/2x speeds; any manual scroll pauses it).
+
 Append `?stage` to the URL to show each beat's stage direction under the narration (useful when reviewing STORY.md).
 
 ## Build and preview
@@ -40,6 +42,7 @@ Or import the GitHub repo in the Vercel dashboard. `vercel.json` sets the Vite f
 | `src/scene.js` | Renderer, camera, starfield, fog, bloom |
 | `src/network.js` | Loads real weights, forward pass, neuron/connection rendering |
 | `src/props.js` | Beat-specific props (ghost sevens, bias dial, label tag, loss readout…) |
+| `src/autoplay.js` | Hands-free mode: constant-speed native scroll + play/pause/speed controls |
 | `src/overlay.js` | Narration, chapter cards, progress bar, intro/end cards |
 | `training/train.py` | Trains the network (NumPy) and exports `public/data/network.{json,bin}` |
 

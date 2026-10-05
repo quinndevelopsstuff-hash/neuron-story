@@ -32,9 +32,9 @@ export class Overlay {
    * @param {HTMLElement} root
    * @param {object} story
    * @param {import('./timeline.js').Timeline} tl
-   * @param {{onJump: (p: number) => void}} options
+   * @param {{onJump: (p: number) => void, onAutoplay: () => void}} options
    */
-  constructor(root, story, tl, { onJump }) {
+  constructor(root, story, tl, { onJump, onAutoplay }) {
     this.tl = tl;
     this.onJump = onJump;
     this.root = root;
@@ -46,7 +46,11 @@ export class Overlay {
       <h1>Inside the Machine</h1>
       <p class="lede">How does a machine learn to see a <span class="nowrap">handwritten <span class="seven">7</span>?</span></p>
       <p class="status" aria-live="polite">Loading the network&hellip;</p>
-      <div class="hint" aria-hidden="true"><span>Scroll to begin</span><span class="chevron"></span></div>`;
+      <div class="hint">
+        <div class="scroll-cue" aria-hidden="true"><span>Scroll to begin</span><span class="chevron"></span></div>
+        <button type="button" class="autoplay-start"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>Auto-play</button>
+      </div>`;
+    this.intro.querySelector('.autoplay-start').addEventListener('click', () => onAutoplay());
     root.appendChild(this.intro);
     this.status = this.intro.querySelector('.status');
 
