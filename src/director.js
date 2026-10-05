@@ -63,6 +63,8 @@ export class Director {
       demoPixel: 0,
       demoPixelIndex: 14 * 28 + 9, // an empty pixel just left of centre
       jitter: 0,
+      unroll: 0,
+      unrollLift: 1,
       scribble: 0,
       weightMix: 0,
       grey: 0,
@@ -77,7 +79,7 @@ export class Director {
       props: {
         ghosts: 0, ghostT: 0, biasRing: 0, biasAngle: 0, spark: 0, sparkT: 0,
         fragments: 0, assemble: 0, perfect7: 0, weightMaps: 0, gabors: 0,
-        tag: 0, tagFlip: 0, loss: 0, heatmap: 0,
+        tag: 0, tagFlip: 0, loss: 0, heatmap: 0, pairLinks: 0,
       },
       bars: { alpha: 0, rise: 0, morph: 0, sum: 0, temp: 0, amber: 0 },
       mood: { bg: new Color(), fog: 0.004, bloom: 1, bloomRadius: 0.55 },
@@ -95,6 +97,10 @@ export class Director {
     this.demoPixel = T([['2.3', 0.1, 0], ['2.3', 0.3, 1], ['2.3', 0.45, 1], ['2.3', 0.6, 0.45], ['2.3', 0.75, 0.45], ['2.3', 0.9, 0]]);
     this.inputReveal = T([['2.4', 0.08, 0], ['2.4', 0.8, 1]], { ease: false });
     this.jitter = T([['2.5', 0.6, 0], ['2.6', 0.2, 1], ['2.6', 0.9, 1], ['2.7', 0.2, 0]]);
+    // 2.7: unroll row by row (linear, so rows leave at a steady cadence), hold, roll back.
+    this.unroll = T([['2.7', 0.06, 0], ['2.7', 0.5, 1], ['2.7', 0.66, 1], ['2.7', 0.94, 0]], { ease: false });
+    // 2.8: faint dashed links between a few pixel pairs.
+    this.pairLinks = T([['2.8', 0.08, 0], ['2.8', 0.3, 1], ['2.8', 0.7, 1], ['2.8', 0.95, 0]]);
 
     /* ---------------- chapter 3: neurons ---------------- */
     this.focus = T([['3.2', 0, 0], ['3.2', 0.5, 1], ['3.9', 1, 1], ['3.10', 0.4, 0]]);
@@ -177,6 +183,10 @@ export class Director {
       M('1.7', 0.5, 0x010205, 0.004, 1.2, 0.7),
       M('1.10', 0.8, 0x01040a, 0.0035, 1.1, 0.65),
       M('2.1', 0.5, 0x02070d, 0.008, 0.85),
+      M('2.6', 0.8, 0x02070d, 0.008, 0.85),
+      M('2.7', 0.3, 0x02070d, 0.003, 0.85), // thinner fog: the line fades out gradually, far away
+      M('2.7', 0.75, 0x02070d, 0.003, 0.85),
+      M('2.8', 0.2, 0x02070d, 0.008, 0.85),
       M('2.9', 0.6, 0x02070d, 0.008, 0.85),
       M('3.1', 0.4, 0x05041a, 0.014, 1.0),
       M('3.11', 0.6, 0x05041a, 0.014, 1.0),
@@ -238,7 +248,10 @@ export class Director {
       K('2.4', 0.7, [0, 0, 38], [0, 0, 0]),
       K('2.5', 0.6, [1.5, 2, 13], [0.5, 1.5, 0]),
       K('2.6', 0.6, [-2.5, -1, 9], [-0.5, -2.5, 0]),
-      K('2.7', 0.6, [0, 1, 46], [0, 0, 0]),
+      // 2.7: from the front-left, so the line recedes to the right into the fog, above the narration.
+      K('2.7', 0.22, [-6, 10, 40], [34, -6, -14]),  // rows peel off the grid
+      K('2.7', 0.56, [16, 22, 82], [92, -8, -30]),  // pulled back: the whole line, the 7's points scattered along it
+      K('2.7', 0.84, [-4, 10, 44], [30, -6, -12]),  // back to the grid as it rolls up
       K('2.8', 0.6, [7, 2, 36], [0, 0, 0]),
       K('2.9', 0.7, [25, 7, 14], [0, 0, -30]),
       K('ch3', 0.5, [14, 4, -10], [0, 0, -40]),
@@ -339,6 +352,9 @@ export class Director {
     s.demoPixel = this.demoPixel.at(p);
     s.inputReveal = this.inputReveal.at(p);
     s.jitter = reduced ? 0 : this.jitter.at(p);
+    s.unroll = this.unroll.at(p);
+    s.unrollLift = reduced ? 0 : 1; // straight paths, no arc, with reduced motion
+    s.props.pairLinks = this.pairLinks.at(p);
 
     /* chapter 3 */
     s.focus = this.focus.at(p);

@@ -10,6 +10,8 @@ import {
   Float32BufferAttribute,
   Line,
   LineBasicMaterial,
+  LineDashedMaterial,
+  LineSegments,
   Group,
   Mesh,
   MeshBasicMaterial,
@@ -308,6 +310,31 @@ export class Props {
     this.tag.visible = false;
     scene.add(this.tag);
 
+    /* 2.8: a few random pixel pairs linked by faint dashed lines (some neighbours, some far apart). */
+    {
+      let seed = 2028;
+      const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      const grid = view.layout[0];
+      const pts = [];
+      for (let k = 0; k < 7; k++) {
+        // Stay inside the central 20x20 area where the digits live.
+        const a = (4 + Math.floor(rand() * 20)) * 28 + 4 + Math.floor(rand() * 20);
+        // Every other pair is a near neighbour; the rest are anywhere.
+        const b = k % 2 === 0
+          ? a + (rand() < 0.5 ? 1 : 28) * (rand() < 0.5 ? 1 : 2)
+          : (4 + Math.floor(rand() * 20)) * 28 + 4 + Math.floor(rand() * 20);
+        for (const i of [a, b]) pts.push(grid[i * 3], grid[i * 3 + 1], grid[i * 3 + 2] + 0.45);
+      }
+      const g = new BufferGeometry();
+      g.setAttribute('position', new Float32BufferAttribute(pts, 3));
+      this.pairLinks = new LineSegments(g, new LineDashedMaterial({
+        color: 0x9fdcff, dashSize: 0.45, gapSize: 0.3, transparent: true, opacity: 0, depthWrite: false,
+      }));
+      this.pairLinks.computeLineDistances();
+      this.pairLinks.visible = false;
+      scene.add(this.pairLinks);
+    }
+
     /* 4.6-4.7: one neuron's 784 real weights as a floating 28x28 heat map, beside it. */
     {
       const W = net.params.trained[0].W;
@@ -396,6 +423,8 @@ export class Props {
     this.tag.rotation.y = Math.PI * p.tagFlip;
 
     setAlpha(this.loss, p.loss);
+
+    setAlpha(this.pairLinks, p.pairLinks * 0.55);
 
     setAlpha(this.heatmap, p.heatmap);
     setAlpha(this.tether, p.heatmap * 0.5);

@@ -134,6 +134,29 @@ export function buildLayout() {
 
 export const LAYER_Z = { input: 0, h1: -40, h2: -72, out: -100 };
 
+/*
+ * Beat 2.7: where each pixel sits when the grid is unrolled into one long line.
+ * Pixel i (row-major, so i = row * 28 + col) goes to slot i, so the line is the 28 rows
+ * laid end to end in order. It starts at the grid's right edge and recedes diagonally
+ * into the fog: 784 slots x 0.38 units is ~300 units long.
+ */
+const LINE_START = [16, 0, 0];
+const LINE_DIR = [0.954, 0, -0.3];
+const LINE_SPACING = 0.38;
+/** How many rows are in flight at once while unrolling. */
+const ROWS_IN_FLIGHT = 4;
+
+export function buildUnrolledLine() {
+  const out = new Float32Array(784 * 3);
+  for (let i = 0; i < 784; i++) {
+    const d = i * LINE_SPACING;
+    out[i * 3] = LINE_START[0] + LINE_DIR[0] * d;
+    out[i * 3 + 1] = LINE_START[1] + LINE_DIR[1] * d;
+    out[i * 3 + 2] = LINE_START[2] + LINE_DIR[2] * d;
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------------ shaders */
 
 const NODE_VERT = /* glsl */ `
@@ -358,6 +381,8 @@ export class NetworkView {
     this.pixelPhase = Float32Array.from({ length: 784 }, (_, i) => (Math.sin(i * 12.9898) * 43758.5453) % (Math.PI * 2));
 
     this.nodes = this._buildNodes(scene);
+    this.lineTargets = buildUnrolledLine();
+    this._unroll = 0; // last unroll amount written to the pixel matrices
     this.connections = this._buildConnections(scene);
     this.labels = this._buildLabels(scene);
   }
@@ -509,6 +534,35 @@ export class NetworkView {
     return sprites;
   }
 
+  /**
+   * Move the 784 existing pixel instances between the grid (u = 0) and the line (u = 1).
+   * Rows leave top-first, a few in flight at once, each on a shallow arc toward the
+   * camera. Only runs while u changes, so it costs nothing outside beat 2.7.
+   */
+  _applyUnroll(u, lift) {
+    if (u === this._unroll) return;
+    this._unroll = u;
+    const { mesh } = this.nodes[0];
+    const grid = this.layout[0];
+    const line = this.lineTargets;
+    const span = 28 + ROWS_IN_FLIGHT;
+    for (let i = 0; i < 784; i++) {
+      const row = Math.floor(i / 28);
+      let t = (u * span - row) / ROWS_IN_FLIGHT;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const e = t * t * (3 - 2 * t);
+      const k = i * 3;
+      const arc = Math.sin(Math.PI * e) * 3 * lift;
+      _m.makeTranslation(
+        grid[k] + (line[k] - grid[k]) * e,
+        grid[k + 1] + (line[k + 1] - grid[k + 1]) * e,
+        grid[k + 2] + (line[k + 2] - grid[k + 2]) * e + arc,
+      );
+      mesh.setMatrixAt(i, _m);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+
   /** Position of neuron `i` in layer `li` (returns a view into the layout array). */
   position(li, i) {
     return this.layout[li].subarray(i * 3, i * 3 + 3);
@@ -524,6 +578,7 @@ export class NetworkView {
     const D = this.display;
 
     /* --- input pixels --- */
+    this._applyUnroll(s.unroll, s.unrollLift);
     {
       const { glow } = this.nodes[0];
       const g = glow.array;
@@ -537,6 +592,8 @@ export class NetworkView {
         if (i === s.demoPixelIndex) v = Math.max(v, s.demoPixel);
         if (s.jitter > 0 && v > 0) v *= 1 + s.jitter * 0.45 * Math.sin(s.time * 2.3 + this.pixelPhase[i]);
         v *= s.act[0];
+        // Lit pixels glow a little brighter while the grid is unrolled, so they stay legible far down the line.
+        if (s.unroll > 0) v *= 1 + 0.6 * s.unroll;
         const k = i * 4;
         g[k] = PALETTE.pixel.r * v * 0.75;
         g[k + 1] = PALETTE.pixel.g * v * 0.75;
