@@ -25,11 +25,12 @@ if (new URLSearchParams(window.location.search).has('debug')) window.__story = {
 
 async function start() {
   // Three.js and the scene modules load in parallel with the network data.
-  const [{ Stage }, { loadNetwork, NetworkView }, { Director }, { Props }] = await Promise.all([
+  const [{ Stage }, { loadNetwork, NetworkView }, { Director }, { Props }, { SoftmaxBars }] = await Promise.all([
     import('./scene.js'),
     import('./network.js'),
     import('./director.js'),
     import('./props.js'),
+    import('./softmax-bars.js'),
   ]);
 
   let stage;
@@ -47,6 +48,8 @@ async function start() {
   const rig = new CameraRig(stage.camera, director.cameraKeys());
   if (window.__story) Object.assign(window.__story, { rig, director, view, stage });
   const props = new Props(stage.scene, net, view, rig.positionAt(tl.at('1.5', 0.5)));
+  const bars = new SoftmaxBars(stage.scene, net, view);
+  if (window.__story) Object.assign(window.__story, { bars, net });
 
   // Compile every shader up front so the first scroll doesn't hitch.
   stage.renderer.compile(stage.scene, stage.camera);
@@ -80,6 +83,7 @@ async function start() {
 
     view.update(s, stage.camera, stage.dpr);
     props.update(s);
+    bars.update(s);
     overlay.update(p);
     stage.render();
 
