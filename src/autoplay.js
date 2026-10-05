@@ -25,7 +25,7 @@ export class AutoPlay {
   constructor(root, stopAt) {
     this.stopAt = stopAt;
     this.playing = false;
-    this.activated = false; // controls (and the space shortcut) appear after the first start
+    this.shown = false; // controls (and the space shortcut) appear once past the title screen
     this.speedIndex = DEFAULT_SPEED;
     this.pos = 0; // fractional scroll position in px; scrollTo only takes whole pixels
     this.lastSet = -1;
@@ -51,12 +51,12 @@ export class AutoPlay {
     this._listen();
   }
 
-  /** Start from the very top (the title screen's Auto-play button). */
-  start() {
-    document.activeElement?.blur?.();
-    window.scrollTo({ top: 0, behavior: 'instant' });
-    this.pos = 0;
-    this.play();
+  /** Show the controls once the reader has scrolled past the title screen (called every frame). */
+  setShown(shown) {
+    shown = shown || this.playing;
+    if (shown === this.shown) return;
+    this.shown = shown;
+    this._render();
   }
 
   play() {
@@ -66,7 +66,6 @@ export class AutoPlay {
     if (this.pos === 0) window.scrollTo({ top: 0, behavior: 'instant' });
     this.lastSet = Math.round(this.pos);
     this.playing = true;
-    this.activated = true;
     this._render();
   }
 
@@ -99,7 +98,7 @@ export class AutoPlay {
   }
 
   _listen() {
-    const isControl = (e) => e.target instanceof Element && e.target.closest('.autoplay-controls, .autoplay-start');
+    const isControl = (e) => e.target instanceof Element && e.target.closest('.autoplay-controls');
     const manual = (e) => { if (!isControl(e)) this.pause(); };
 
     window.addEventListener('wheel', manual, { passive: true });
@@ -110,7 +109,7 @@ export class AutoPlay {
     });
     window.addEventListener('keydown', (e) => {
       if (SCROLL_KEYS.has(e.key)) this.pause();
-      if (e.key === ' ' && this.activated && !(e.target instanceof Element && e.target.closest('button, input, textarea'))) {
+      if (e.key === ' ' && this.shown && !(e.target instanceof Element && e.target.closest('button, input, textarea'))) {
         e.preventDefault(); // otherwise space also scrolls the page
         this.playing ? this.pause() : this.play();
       }
@@ -122,10 +121,10 @@ export class AutoPlay {
   }
 
   _render() {
-    this.controls.classList.toggle('visible', this.activated);
-    document.body.classList.toggle('autoplay-on', this.activated);
+    this.controls.classList.toggle('visible', this.shown);
+    document.body.classList.toggle('autoplay-on', this.shown);
     this.toggleBtn.innerHTML = this.playing ? PAUSE_ICON : PLAY_ICON;
-    this.toggleBtn.setAttribute('aria-label', this.playing ? 'Pause auto-play' : 'Resume auto-play');
+    this.toggleBtn.setAttribute('aria-label', this.playing ? 'Pause auto-play' : 'Start auto-play');
     this.speedBtn.textContent = `${SPEEDS[this.speedIndex]}×`;
   }
 }

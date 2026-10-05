@@ -99,25 +99,6 @@ html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transpa
 }
 .intro.ready .hint { opacity: 0.9; }
 .scroll-cue { display: flex; flex-direction: column; align-items: center; gap: 0.7rem; }
-.autoplay-start {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 1rem;
-  border-radius: 999px;
-  border: 1px solid rgba(95, 212, 255, 0.45);
-  background: rgba(20, 60, 90, 0.3);
-  color: var(--ink);
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  cursor: pointer;
-  pointer-events: none; /* enabled once the network has loaded */
-}
-.intro.ready .autoplay-start { pointer-events: auto; }
-.autoplay-start svg { width: 11px; height: 11px; fill: var(--cyan); }
-.autoplay-start:hover { background: rgba(30, 90, 130, 0.5); }
-.autoplay-start:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
 
 /* ---------- auto-play controls (bottom corner, after first start) ---------- */
 .autoplay-controls {
@@ -423,7 +404,8 @@ html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transpa
 @media (max-width: 640px) {
   /* keep the narration clear of the auto-play controls */
   .autoplay-on .narration { bottom: max(7vh, calc(env(safe-area-inset-bottom) + 58px)); }
-  .intro .hint { gap: 1.1rem; }
+  /* Copyright moves left, clear of the auto-play controls in the bottom-right corner. */
+  .copyright { text-align: left; right: calc(var(--gutter) + 108px); }
   :root { --panel: rgba(3, 9, 20, 0.72); }
   .beat { padding: 0.9rem 1.05rem 1rem; border-radius: 12px; }
   .chapter-label { top: calc(env(safe-area-inset-top) + 12px); }
