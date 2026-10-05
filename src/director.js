@@ -75,6 +75,20 @@ export class Director {
       out7Highlight: 0,
       out7Pulse: 0,
       outProbs: new Float32Array(10),
+      // Training time-lapse (7.11-7.13): position among the real training snapshots.
+      curveMode: false,
+      curveT: 0,
+      curveIdx: 0,
+      curveFrac: 0,
+      // Real digits streaming through the input grid (7.12 training set, 7.14 test set).
+      streamMix: 0,
+      streamSet: 0,
+      streamA: 0,
+      streamB: 0,
+      streamPrev: 0,
+      streamF: 0,
+      streamTrail: 0,
+      hud: { readout: 0, p7: 0, step: 0, test: 0, testShown: 0, testCount: 0, testCurrent: -1, testMark: 0 },
       conn: [0, 1, 2].map(() => ({ opacity: 0, lit: 0, sign: 1, pulse: 0, width: 1, back: 0, backPos: 2 })),
       props: {
         ghosts: 0, ghostT: 0, biasRing: 0, biasAngle: 0, spark: 0, sparkT: 0,
@@ -146,9 +160,22 @@ export class Director {
     /* ---------------- chapter 6/7: verdict, untrained, learning ---------------- */
     this.scribble = T([['6.9', 0, 0], ['6.9', 0.2, 1], ['6.9', 0.85, 1], ['6.10', 0.1, 0]]);
     this.grey = T([['6.10', 0, 0], ['6.10', 0.6, 1], ['7.1', 0, 1], ['7.1', 0.6, 0.35], ['7.12', 0, 0.35], ['7.12', 0.5, 0]]);
-    this.weightMix = T([['4.9', 0.3, 0], ['4.9', 0.42, 1], ['4.9', 0.55, 1], ['4.9', 0.68, 0], ['6.10', 0.6, 0], ['7.1', 0.6, 1], ['7.11', 0, 1], ['7.11', 0.8, 0.92], ['7.12', 0.1, 0.92], ['7.13', 0.8, 0]]);
-    this.curveActive = T([['7.11', 0.9, 0], ['7.12', 0.1, 1]]);
-    this.curveT = T([['7.12', 0.1, 0], ['7.13', 0.8, 1]], { ease: false });
+    this.weightMix = T([['4.9', 0.3, 0], ['4.9', 0.42, 1], ['4.9', 0.55, 1], ['4.9', 0.68, 0], ['6.10', 0.6, 0], ['7.1', 0.6, 1], ['7.11', 0.15, 1], ['7.13', 0.8, 0]]);
+    /*
+     * Training time-lapse, driven by the real snapshots saved during training (steps 0, 25,
+     * 50, 100, ... 14,070). curveT runs 0 -> 1 across them, evenly per snapshot. 7.11's
+     * "tiny step" is the first sliver of real training; 7.12-7.13 is the rest.
+     */
+    this.curveActive = T([['7.11', 0.1, 0], ['7.11', 0.15, 1]]);
+    this.curveT = T([['7.11', 0.15, 0], ['7.11', 0.85, 0.03], ['7.12', 0.05, 0.03], ['7.13', 0.8, 1]], { ease: false });
+    // 7.12: training digits stream through the grid, then settle back on our 7 in 7.13.
+    this.streamMix = T([['7.12', 0.03, 0], ['7.12', 0.12, 1], ['7.13', 0.1, 1], ['7.13', 0.4, 0]]);
+    this.streamPos = T([['7.12', 0.03, 0], ['7.13', 0.4, 1]], { ease: false });
+    // 7.14: unseen test digits, one at a time, with a running tally.
+    this.testMix = T([['7.13', 0.9, 0], ['7.14', 0.06, 1], ['7.14', 0.92, 1], ['7.15', 0.12, 0]]);
+    this.testPos = T([['7.14', 0.06, 0], ['7.14', 0.9, 1]], { ease: false });
+    this.hudReadout = T([['7.12', 0.05, 0], ['7.12', 0.18, 1], ['7.13', 1, 1], ['7.14', 0.08, 0]]);
+    this.hudTest = T([['7.14', 0.02, 0], ['7.14', 0.12, 1], ['7.14', 0.95, 1], ['7.15', 0.15, 0]]);
     this.out7Pulse = T([['7.2b', 0.5, 0], ['7.2b', 0.65, 1], ['7.2b', 0.85, 0]]);
     this.out7Highlight = T([['7.3', 0.8, 0], ['7.4', 0.3, 1], ['7.4', 1, 1], ['7.5', 0.3, 0]]);
     this.tag = T([['7.2b', 0, 0], ['7.2b', 0.15, 1], ['7.4', 1, 1], ['7.5', 0.2, 0]]);
@@ -410,6 +437,7 @@ export class Director {
     s.props.tagFlip = this.tagFlip.at(p);
     s.props.loss = this.loss.at(p);
     s.props.heatmap = this.heatmap.at(p);
+    this._stream(p, reduced);
     this._outputs(p, mix);
 
     /* chapter 5 props */
@@ -454,6 +482,84 @@ export class Director {
         v += (c - v) * curveActive;
       }
       out[k] = v + (sc[k] - v) * scribble;
+    }
+
+    // Training stage and our 7's real confidence at that stage (7.12-7.13 readout).
+    const s = this.state;
+    s.curveMode = curveActive > 0.5;
+    s.curveT = this.curveT.at(p);
+    s.curveIdx = ci;
+    s.curveFrac = cf;
+    s.hud.p7 = curve[ci].probs[7] + (curve[ci + 1].probs[7] - curve[ci].probs[7]) * cf;
+    s.hud.step = curve[ci].step + (curve[ci + 1].step - curve[ci].step) * cf;
+
+    // 7.14: the current test digit's real output probabilities.
+    const tl = this.timelapse;
+    if (tl && s.streamSet === 1 && s.streamMix > 0) {
+      const P = tl.test.probs;
+      const a = s.streamA * 10;
+      const b = s.streamB * 10;
+      for (let k = 0; k < 10; k++) {
+        const v = P[a + k] + (P[b + k] - P[a + k]) * s.streamF;
+        out[k] += (v - out[k]) * s.streamMix;
+      }
+    }
+  }
+
+  /** Attach the lazily loaded time-lapse data (real digits and training snapshots). */
+  setTimelapse(tl) {
+    this.timelapse = tl;
+  }
+
+  /**
+   * Which real digits are on the input grid. Scroll position = time: each digit has a
+   * slot, and the grid crossfades from one to the next (plus a faint trail of the one
+   * before, which reads as motion blur). Reduced motion shows fewer, slower digits.
+   */
+  _stream(p, reduced) {
+    const s = this.state;
+    const tl = this.timelapse;
+    const train = this.streamMix.at(p);
+    const test = this.testMix.at(p);
+    s.hud.readout = this.hudReadout.at(p);
+    s.hud.test = this.hudTest.at(p);
+    if (!tl) s.hud.test = 0; // the test tally needs the time-lapse data
+    if (!tl || (train <= 0 && test <= 0)) {
+      s.streamMix = 0;
+      return;
+    }
+    if (test > 0) {
+      // Test digits: each holds still for most of its slot, then crossfades to the next.
+      const n = reduced ? Math.ceil(tl.test.count / 2) : tl.test.count;
+      const x = this.testPos.at(p) * n;
+      const k = Math.min(Math.floor(x), n - 1);
+      const local = x - k;
+      const f = k < n - 1 ? smooth(clamp01((local - 0.78) / 0.22)) : 0;
+      s.streamSet = 1;
+      s.streamMix = test;
+      s.streamA = k;
+      s.streamB = Math.min(k + 1, n - 1);
+      s.streamPrev = k;
+      s.streamF = f;
+      s.streamTrail = 0;
+      s.hud.testCount = n;
+      s.hud.testCurrent = k;
+      // The verdict mark appears once the digit has been "read" (a third into its slot).
+      s.hud.testMark = clamp01((local - 0.3) / 0.12);
+      s.hud.testShown = k + (local >= 0.3 ? 1 : 0);
+    } else {
+      // Training digits: fast, with a trail, cycling through the real sample.
+      const n = reduced ? 36 : 160;
+      const x = this.streamPos.at(p) * n;
+      const k = Math.floor(x);
+      const count = tl.train.count;
+      s.streamSet = 0;
+      s.streamMix = train;
+      s.streamA = k % count;
+      s.streamB = (k + 1) % count;
+      s.streamPrev = (k + count - 1) % count;
+      s.streamF = x - k;
+      s.streamTrail = reduced ? 0 : 0.35;
     }
   }
 

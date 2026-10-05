@@ -314,6 +314,57 @@ html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transpa
 }
 .chapter-label.visible { opacity: 0.85; }
 
+/* ---------- training time-lapse HUD (7.12-7.14) ---------- */
+.tl-hud {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 30px);
+  right: var(--gutter);
+  padding: 0.7rem 0.9rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  font-variant-numeric: tabular-nums;
+}
+.tl-hud .lbl {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.tl-readout { min-width: 13.5rem; }
+.tl-readout .val {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--amber);
+}
+.tl-readout .sub { display: block; margin-top: 0.15rem; font-size: 0.74rem; color: var(--ink-dim); }
+.tl-tests .strip { display: flex; gap: 4px; margin: 0.45rem 0 0.4rem; }
+.tl-tests .slot { display: flex; flex-direction: column; align-items: center; width: 28px; }
+.tl-tests canvas {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  image-rendering: pixelated;
+  border: 1px solid rgba(140, 205, 255, 0.18);
+  background: #000;
+}
+.tl-tests .slot.empty canvas { opacity: 0.25; }
+.tl-tests .slot.current canvas { border-color: rgba(95, 212, 255, 0.8); }
+.tl-tests .mark { height: 1.05rem; font-size: 0.72rem; font-weight: 600; line-height: 1.05rem; white-space: nowrap; }
+.tl-tests .slot.ok .mark { color: var(--cyan); }
+.tl-tests .slot.miss .mark { color: #ff6a3d; }
+.tl-tests .slot.miss canvas { border-color: rgba(255, 106, 61, 0.85); }
+.tl-tests .tally { font-size: 0.78rem; color: var(--ink); }
+
 /* ---------- end card ---------- */
 .end-card {
   position: fixed;

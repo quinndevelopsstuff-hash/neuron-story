@@ -98,6 +98,58 @@ export function forward(layers, input) {
   return acts; // [input, hidden1, hidden2, probabilities]
 }
 
+/**
+ * Time-lapse data for beats 7.12-7.14 (training/train.py -> timelapse.{json,bin}), loaded
+ * after the site has started. Contains the real weight snapshots saved during training,
+ * real MNIST training digits to stream through the grid, and real test digits with the
+ * final network's real predictions.
+ */
+export async function loadTimelapse(net, base = './data/') {
+  const [meta, buffer] = await Promise.all([
+    fetch(`${base}timelapse.json`).then((r) => {
+      if (!r.ok) throw new Error(`timelapse.json: ${r.status}`);
+      return r.json();
+    }),
+    fetch(`${base}timelapse.bin`).then((r) => {
+      if (!r.ok) throw new Error(`timelapse.bin: ${r.status}`);
+      return r.arrayBuffer();
+    }),
+  ]);
+  const bytes = new Uint8Array(buffer);
+  const int8 = new Int8Array(buffer);
+  const last = meta.snapshots.length - 1;
+
+  // Snapshot k: [{W, b}] per layer. The endpoints are the float32 untrained/trained
+  // weights already loaded; intermediate ones are dequantised from int8.
+  const snapshots = meta.snapshots.map((snap, k) => ({
+    step: snap.step,
+    layers: snap.layers.map((info, li) => {
+      if (k === 0) return net.params.untrained[li];
+      if (k === last) return net.params.trained[li];
+      const W = new Float32Array(info.length);
+      for (let i = 0; i < info.length; i++) W[i] = int8[info.offset + i] * info.scale;
+      return { W, b: Float32Array.from(info.biases) };
+    }),
+  }));
+  // The hero 7's real activations at every snapshot (one forward pass each, at load).
+  const heroRuns = snapshots.map((s) => forward(s.layers, net.images.hero));
+
+  const t = meta.testDigits;
+  return {
+    snapshots,
+    heroRuns,
+    bytes,
+    train: { offset: meta.trainDigits.offset, count: meta.trainDigits.count },
+    test: {
+      offset: t.offset,
+      count: t.count,
+      labels: t.labels,
+      preds: t.preds,
+      probs: Float32Array.from(t.probs.flat()),
+    },
+  };
+}
+
 /* ------------------------------------------------------------------ layout */
 
 /** World-space positions of every neuron, layer by layer (Float32Array of xyz). */
@@ -385,6 +437,53 @@ export class NetworkView {
     this._unroll = 0; // last unroll amount written to the pixel matrices
     this.connections = this._buildConnections(scene);
     this.labels = this._buildLabels(scene);
+    this.timelapse = null;
+    this._segA = -1; // which snapshots are currently in the aW buffers (see _applyWeightSegment)
+    this._segB = -1;
+  }
+
+  /**
+   * Attach time-lapse data (beats 7.12-7.14). Precomputes, per training snapshot, the
+   * normalised weight of every drawn connection and the display activations, so the
+   * per-frame work is just copying between preallocated arrays when a checkpoint changes.
+   */
+  setTimelapse(tl) {
+    const K = tl.snapshots.length;
+    this.timelapse = tl;
+    this.snapWeights = []; // [k][li] -> Float32Array per drawn connection
+    for (let k = 0; k < K; k++) {
+      // Same normalisation as the endpoints in _buildConnections: untrained x0.7, trained x1,
+      // intermediate checkpoints in between.
+      const factor = 0.7 + 0.3 * (k / (K - 1));
+      this.snapWeights.push(this.connections.map((c, li) => {
+        const W = tl.snapshots[k].layers[li].W;
+        const scale = percentileAbs(W, 0.995);
+        return Float32Array.from(c.indices, (idx) => Math.max(-1, Math.min(1, W[idx] / scale)) * factor);
+      }));
+    }
+    this.snapActs = tl.heroRuns.map((run) => [1, 2].map((li) => {
+      const ref = Math.max(...this.net.runs.trained[li]) || 1;
+      return Float32Array.from(run[li], (v) => Math.min(v / ref, 1.3));
+    }));
+    this._segA = this._segB = -1;
+  }
+
+  /** Load snapshots a and b into the connection weight buffers (x and y of aW). */
+  _applyWeightSegment(a, b) {
+    if (a === this._segA && b === this._segB) return;
+    this._segA = a;
+    this._segB = b;
+    for (let li = 0; li < 3; li++) {
+      const { aW } = this.connections[li];
+      const arr = aW.array;
+      const wa = this.snapWeights[a][li];
+      const wb = this.snapWeights[b][li];
+      for (let i = 0, n = wa.length; i < n; i++) {
+        arr[i * 2] = wa[i];
+        arr[i * 2 + 1] = wb[i];
+      }
+      aW.needsUpdate = true;
+    }
   }
 
   _buildNodes(scene) {
@@ -506,7 +605,7 @@ export class NetworkView {
       mesh.frustumCulled = false;
       mesh.renderOrder = 1;
       scene.add(mesh);
-      result.push({ mesh, material, count: n });
+      result.push({ mesh, material, count: n, indices, aW: geometry.getAttribute('aW') });
     }
     return result;
   }
@@ -577,6 +676,25 @@ export class NetworkView {
     const cyan = PALETTE.cyan;
     const D = this.display;
 
+    /*
+     * Which weights the connections show. Normally x = trained, y = untrained, mixed by
+     * weightMix. During the training time-lapse, x and y are two neighbouring real
+     * checkpoints and the mix is the position between them.
+     */
+    const tl = this.timelapse;
+    let mix = s.weightMix;
+    if (tl) {
+      const last = tl.snapshots.length - 1;
+      if (s.curveMode) {
+        this._applyWeightSegment(s.curveIdx, Math.min(s.curveIdx + 1, last));
+        mix = s.curveFrac;
+      } else {
+        this._applyWeightSegment(last, 0);
+      }
+    } else if (s.curveMode) {
+      mix = 1 - s.curveT; // data not loaded yet: fall back to a straight blend
+    }
+
     /* --- input pixels --- */
     this._applyUnroll(s.unroll, s.unrollLift);
     {
@@ -586,10 +704,22 @@ export class NetworkView {
       const scrib = this.net.images.scribble;
       const vis = s.vis[0];
       const revealEdge = s.inputReveal * 1.08;
+      const streamOn = tl && s.streamMix > 0;
+      const bytes = streamOn ? tl.bytes : null;
+      const set = s.streamSet === 1 ? tl?.test : tl?.train;
+      const sA = streamOn ? set.offset + s.streamA * 784 : 0;
+      const sB = streamOn ? set.offset + s.streamB * 784 : 0;
+      const sP = streamOn ? set.offset + s.streamPrev * 784 : 0;
       for (let i = 0; i < 784; i++) {
         const reveal = Math.min(Math.max((revealEdge - this.revealRank[i]) / 0.08, 0), 1);
         let v = hero[i] * reveal * (1 - s.scribble) + scrib[i] * s.scribble;
         if (i === s.demoPixelIndex) v = Math.max(v, s.demoPixel);
+        // 7.12 / 7.14: real digits streaming through the grid (crossfade + faint trail = blur).
+        if (streamOn) {
+          let d = bytes[sA + i] * (1 - s.streamF) + bytes[sB + i] * s.streamF + bytes[sP + i] * s.streamTrail;
+          d = d > 255 ? 1 : d / 255;
+          v += (d - v) * s.streamMix;
+        }
         if (s.jitter > 0 && v > 0) v *= 1 + s.jitter * 0.45 * Math.sin(s.time * 2.3 + this.pixelPhase[i]);
         v *= s.act[0];
         // Lit pixels glow a little brighter while the grid is unrolled, so they stay legible far down the line.
@@ -615,8 +745,12 @@ export class NetworkView {
         let a;
         if (li === 3) {
           a = s.outProbs[j];
+        } else if (tl && s.curveMode) {
+          const A = this.snapActs[this._segA][li - 1];
+          const B = this.snapActs[this._segB][li - 1];
+          a = A[j] + (B[j] - A[j]) * mix;
         } else {
-          a = t[j] + (u[j] - t[j]) * s.weightMix;
+          a = t[j] + (u[j] - t[j]) * mix;
           a += (sc[j] - a) * s.scribble;
         }
         a *= s.act[li];
@@ -664,7 +798,7 @@ export class NetworkView {
       u.uSign.value = c.sign;
       u.uPulse.value = c.pulse;
       u.uWidth.value = c.width;
-      u.uMix.value = s.weightMix;
+      u.uMix.value = mix;
       u.uTime.value = s.time;
       u.uGrey.value = s.grey;
       u.uFocus.value = li === 0 ? this.focusIndex : -1;

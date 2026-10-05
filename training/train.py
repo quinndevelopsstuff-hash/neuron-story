@@ -278,3 +278,76 @@ print("curve p7:", [(c["step"], c["probs"][7]) for c in curve])
 print("scribble probs: ", r(scribble_probs, 3))
 print("hidden1 active:", int((hero_acts[1] > 0).sum()), "/ 32;",
       "hidden2 active:", int((hero_acts[2] > 0).sum()), "/ 16")
+
+# ---------------------------------------------------------------- time-lapse data (beats 7.12-7.14)
+# Loaded lazily by the site after it starts, so it never delays the first frame.
+#   timelapse.bin   int8 weights for each intermediate training snapshot, then
+#                   uint8 training digits, then uint8 test digits
+#   timelapse.json  offsets, quantisation scales, biases, labels and predictions
+
+steps_sorted = sorted(snapshots)
+blobs = []
+offset = 0
+snap_meta = []
+for k, s in enumerate(steps_sorted):
+    entry = {"step": int(s), "layers": []}
+    for li, (w, b) in enumerate(snapshots[s]):
+        info = {
+            "p995": float(np.quantile(np.abs(w), 0.995)),  # display normalisation, as in the site
+            "biases": r(b, 5),
+        }
+        if 0 < k < len(steps_sorted) - 1:  # endpoints are already in network.bin as float32
+            scale = float(np.abs(w).max()) or 1.0
+            q = np.clip(np.round(w / scale * 127), -127, 127).astype(np.int8)
+            info.update({"offset": offset, "length": int(q.size), "scale": scale / 127})
+            blobs.append(q.tobytes())
+            offset += q.size
+        entry["layers"].append(info)
+    snap_meta.append(entry)
+
+trng = np.random.default_rng(5)
+train_pick = trng.choice(len(x_train), 192, replace=False)
+train_u8 = (x_train[train_pick] * 255).round().astype(np.uint8)
+blobs.append(train_u8.tobytes())
+train_offset = offset
+offset += train_u8.size
+
+# 52 unseen test digits: 50 correct + 2 misses = 96.2%, matching the test accuracy.
+pred_test = probs_test.argmax(axis=1)
+wrong = np.where(pred_test != y_test)[0]
+right = np.where(pred_test == y_test)[0]
+test_pick = np.concatenate([trng.choice(right, 50, replace=False), trng.choice(wrong, 2, replace=False)])
+# One miss in each half (the first misses no earlier than digit 6), so both the full run
+# (50/52) and the shorter reduced-motion run of the first 26 (25/26) show 96.2% accuracy.
+def misses_ok(order):
+    m = np.where(pred_test[order] != y_test[order])[0]
+    return 6 <= m[0] < 26 <= m[1]
+trng.shuffle(test_pick)
+while not misses_ok(test_pick):
+    trng.shuffle(test_pick)
+test_u8 = x_test_u8[test_pick]
+blobs.append(test_u8.tobytes())
+test_offset = offset
+offset += test_u8.size
+
+with open(os.path.join(OUT, "timelapse.bin"), "wb") as f:
+    for blob in blobs:
+        f.write(blob)
+
+timelapse = {
+    "snapshots": snap_meta,
+    "trainDigits": {"offset": train_offset, "count": int(len(train_pick)),
+                    "labels": [int(v) for v in y_train[train_pick]]},
+    "testDigits": {
+        "offset": test_offset, "count": int(len(test_pick)),
+        "indices": [int(v) for v in test_pick],
+        "labels": [int(v) for v in y_test[test_pick]],
+        "preds": [int(v) for v in pred_test[test_pick]],
+        "probs": [r(probs_test[i], 3) for i in test_pick],
+    },
+}
+with open(os.path.join(OUT, "timelapse.json"), "w") as f:
+    json.dump(timelapse, f, separators=(",", ":"))
+
+print("timelapse.bin bytes:", offset, "| test digits correct:",
+      int((pred_test[test_pick] == y_test[test_pick]).sum()), "/", len(test_pick))

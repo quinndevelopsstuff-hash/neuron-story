@@ -25,12 +25,13 @@ if (new URLSearchParams(window.location.search).has('debug')) window.__story = {
 
 async function start() {
   // Three.js and the scene modules load in parallel with the network data.
-  const [{ Stage }, { loadNetwork, NetworkView }, { Director }, { Props }, { SoftmaxBars }] = await Promise.all([
+  const [{ Stage }, { loadNetwork, loadTimelapse, NetworkView }, { Director }, { Props }, { SoftmaxBars }, { TimelapseHud }] = await Promise.all([
     import('./scene.js'),
     import('./network.js'),
     import('./director.js'),
     import('./props.js'),
     import('./softmax-bars.js'),
+    import('./timelapse-hud.js'),
   ]);
 
   let stage;
@@ -54,6 +55,17 @@ async function start() {
   // Compile every shader up front so the first scroll doesn't hitch.
   stage.renderer.compile(stage.scene, stage.camera);
   overlay.ready();
+
+  // Time-lapse data for 7.12-7.14 (real digits + training snapshots) loads in the background;
+  // until it arrives those beats fall back to a simple blend.
+  const hud = new TimelapseHud(document.getElementById('ui'));
+  loadTimelapse(net, `${import.meta.env.BASE_URL}data/`)
+    .then((tlData) => {
+      view.setTimelapse(tlData);
+      director.setTimelapse(tlData);
+      hud.setTimelapse(tlData);
+    })
+    .catch((err) => console.warn('Time-lapse data unavailable:', err));
 
   let last = performance.now();
   let slowFrames = 0;
@@ -84,6 +96,7 @@ async function start() {
     view.update(s, stage.camera, stage.dpr);
     props.update(s);
     bars.update(s);
+    hud.update(s);
     overlay.update(p);
     stage.render();
 
