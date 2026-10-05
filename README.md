@@ -9,7 +9,7 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Click **Auto-play** on the title screen for a hands-free ~10-minute run (space toggles, 1x/1.5x/2x speeds; any manual scroll pauses it).
+Click **Auto-play** on the title screen for a hands-free ~12-minute run (space toggles, 0.75x–4x speeds; any manual scroll pauses it).
 
 Append `?stage` to the URL to show each beat's stage direction under the narration (useful when reviewing STORY.md).
 

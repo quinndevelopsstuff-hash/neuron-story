@@ -152,7 +152,7 @@ html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transpa
 .autoplay-controls button:hover { border-color: rgba(95, 212, 255, 0.5); }
 .autoplay-controls button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .autoplay-controls svg { width: 13px; height: 13px; fill: var(--cyan); }
-.autoplay-controls .ap-speed { min-width: 46px; }
+.autoplay-controls .ap-speed { min-width: 54px; } /* fits "0.75×" so the controls never shift */
 .chevron {
   width: 14px;
   height: 14px;

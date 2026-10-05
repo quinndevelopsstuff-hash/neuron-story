@@ -8,8 +8,9 @@
  */
 
 /** Seconds for the whole story at 1x. */
-const STORY_SECONDS = 600;
-const SPEEDS = [1, 1.5, 2];
+const STORY_SECONDS = 720;
+const SPEEDS = [0.75, 1, 1.5, 2, 3, 4];
+const DEFAULT_SPEED = SPEEDS.indexOf(1);
 
 const PLAY_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>';
 const PAUSE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z"/></svg>';
@@ -25,7 +26,7 @@ export class AutoPlay {
     this.stopAt = stopAt;
     this.playing = false;
     this.activated = false; // controls (and the space shortcut) appear after the first start
-    this.speedIndex = 0;
+    this.speedIndex = DEFAULT_SPEED;
     this.pos = 0; // fractional scroll position in px; scrollTo only takes whole pixels
     this.lastSet = -1;
 
