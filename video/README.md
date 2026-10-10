@@ -7,17 +7,79 @@ are piped straight into ffmpeg. All output goes to `video-out/` (git-ignored).
 ## Requirements
 
 - Node 20+ and the repo's npm dependencies (`npm install`)
-- Python 3.10+ with `pip install -r video/requirements.txt` (Piper TTS, numpy, scipy)
+- Python 3.10+ with `pip install -r video/requirements.txt` (Kokoro, Piper, numpy, scipy), see below
 - ffmpeg 6+ on your PATH
 - A Chromium for Playwright: `npx playwright install chromium`
   (or point `CHROME_PATH` at an existing Chrome/Chromium)
 
-### The voice
+### Python environment
 
-Piper voice **en-us-libritts-high**, speaker index **228** (LibriTTS reader 5876), from the
-official Piper GitHub release. It was chosen for licence (CC BY 4.0, usable in a published
-video with attribution) and by measurement: cleanest recording, clear voicing, calm pace and
-natural pitch movement among 76 speakers tested.
+Use a virtual environment with a current pip/setuptools (an old system setuptools can fail to
+build one of Kokoro's dependencies, `docopt`):
+
+```sh
+python3 -m venv video-out/.venv
+source video-out/.venv/bin/activate          # Windows: video-out\.venv\Scripts\activate
+pip install -U pip setuptools wheel
+pip install -r video/requirements.txt
+```
+
+Optional, used by Kokoro for words missing from its dictionary: `sudo apt-get install espeak-ng`
+(Linux) or `brew install espeak-ng` (macOS).
+
+### The voice (TTS engine is a flag)
+
+`--tts kokoro` (default) or `--tts piper` (fallback), on both `build_audio.py` and
+`voice_samples.py`.
+
+**Kokoro** (Kokoro-82M, Apache 2.0, CPU is fine). On first use it downloads about 330 MB from
+Hugging Face (`hexgrad/Kokoro-82M`). Shortlisted narrator voices, all spoken at speed 0.92:
+
+| Voice | Sounds like |
+| --- | --- |
+| `af_heart` (default) | US English, female, warm and even; the highest-rated Kokoro voice |
+| `am_michael` | US English, male, mid-low pitch, steady |
+| `bf_emma` | British English (southern), female, clear and measured |
+
+Audition them first (writes one file per voice to `video-out/voice-samples/`, each speaking
+beats 1.2, 3.7 and 6.8):
+
+```sh
+python video/voice_samples.py                       # the three voices above
+python video/voice_samples.py --voices bm_george    # any other Kokoro voice
+python video/voice_samples.py --tts piper           # the Piper fallback, for comparison
+```
+
+No network on the render machine? Download the files once and point at them:
+
+```sh
+pip install -U huggingface_hub
+hf download hexgrad/Kokoro-82M config.json kokoro-v1_0.pth \
+  voices/af_heart.pt voices/am_michael.pt voices/bf_emma.pt --local-dir video-out/kokoro
+python video/voice_samples.py --kokoro-dir video-out/kokoro      # or set KOKORO_DIR
+```
+
+(Older `huggingface_hub` versions call the command `huggingface-cli download`.)
+
+**In Google Colab** (free CPU runtime is enough for the samples):
+
+```python
+!git clone https://github.com/quinndevelopsstuff-hash/neuron-story.git
+%cd neuron-story
+!git checkout claude/friendly-turing-3034k1
+!apt-get -qq install -y espeak-ng
+!pip install -q kokoro soundfile numpy scipy
+!python video/voice_samples.py
+from IPython.display import Audio, display
+import glob
+for f in sorted(glob.glob('video-out/voice-samples/*.wav')):
+    print(f); display(Audio(f))
+```
+
+(If the repository is private, clone with a GitHub token or upload the repo folder.)
+
+**Piper** (fallback): voice `en-us-libritts-high`, speaker index 228 (LibriTTS reader 5876),
+from the official Piper GitHub release:
 
 ```sh
 mkdir -p video-out/voices && cd video-out/voices
@@ -26,14 +88,16 @@ mkdir en-us-libritts-high && tar -xzf voice-en-us-libritts-high.tar.gz -C en-us-
 cd ../..
 ```
 
-To try another speaker: `python3 video/build_audio.py --speaker 144` (clips are cached per
-voice/speaker/text, so only changed beats are re-spoken).
+Clips are cached per engine, voice and text, so switching voice only re-speaks what changed.
 
 ## Steps
 
 ```sh
+# 0. Pick a narrator (see above)
+python video/voice_samples.py
+
 # 1. Audio: narration clips, timeline, subtitles, soundtrack, mix (about 5 min)
-python3 video/build_audio.py
+python video/build_audio.py --voice af_heart          # or --tts piper
 
 # 2. Optional: a 30-second test with audio -> video-out/test.mp4
 node video/render.mjs --test 30 --gpu
@@ -56,6 +120,8 @@ continues with the next chapter. Delete `video-out/chunks/` to start over.
 
 | File | Role |
 | --- | --- |
+| `video/tts.py` | TTS engines behind one interface (`--tts kokoro` default, `--tts piper`), pronunciation fixes, clip levelling |
+| `video/voice_samples.py` | Voice audition: beats 1.2, 3.7, 6.8 per voice → `video-out/voice-samples/` |
 | `video/build_audio.py` | STORY.md → per-beat TTS clips → timeline built from the narration → `narration.wav`, `timeline.json`, `.srt`; calls `music.py`; ducks and loudness-normalises the mix |
 | `video/music.py` | Original procedural soundtrack (pad, sub-bass drone, FM bells, reverb), mood per chapter |
 | `video/render.mjs` | Builds and serves the site, maps each frame to story progress, captures frames into ffmpeg in resumable chunks, muxes the audio |
@@ -72,7 +138,9 @@ ahead to cancel its lag), so camera moves ease rather than jump at beat boundari
 
 ## Credits
 
-- Narration voice: Piper (Open Home Foundation / Rhasspy) with the LibriTTS-trained
+- Narration voice (default): Kokoro-82M by hexgrad, via the `kokoro` package. Licence: Apache
+  License 2.0 (model weights and code).
+- Fallback voice: Piper (Open Home Foundation / Rhasspy) with the LibriTTS-trained
   `en-us-libritts-high` model. LibriTTS (Zen et al., 2019) is CC BY 4.0, derived from
   LibriVox public-domain audiobook recordings.
 - Music: generated procedurally by `video/music.py` for this project.

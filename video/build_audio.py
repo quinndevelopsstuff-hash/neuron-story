@@ -2,7 +2,8 @@
 Stage 1 of the video: narration, timeline, subtitles, soundtrack and the final audio mix.
 
   1. Reads the narration (not the [stage directions]) from STORY.md, beat by beat.
-  2. Speaks each beat with Piper (local, offline TTS) -> one clip per beat (cached).
+  2. Speaks each beat with the chosen TTS engine (video/tts.py: Kokoro by default, Piper as a
+     fallback) -> one clip per beat, cached per engine/voice/text.
   3. Builds the video timeline FROM the narration: every beat lasts exactly as long as its
      clip plus padding (0.2 s before + 0.2 s after = ~0.4 s between beats); chapter cards
      add ~1.5 s between chapters; a title hold at the start and the end card at the end.
@@ -13,13 +14,13 @@ Stage 1 of the video: narration, timeline, subtitles, soundtrack and the final a
 
 Usage (from the repo root):
   pip install -r video/requirements.txt
-  python3 video/build_audio.py                 # everything
-  python3 video/build_audio.py --voice PATH    # a different Piper .onnx voice
+  python3 video/build_audio.py                        # everything, Kokoro (default voice)
+  python3 video/build_audio.py --voice am_michael     # another Kokoro voice
+  python3 video/build_audio.py --tts piper            # Piper fallback (LibriTTS-high, speaker 228)
 """
 
 import argparse
 import hashlib
-import io
 import json
 import os
 import re
@@ -28,17 +29,15 @@ import sys
 import wave
 
 import numpy as np
-from scipy.signal import resample_poly
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from tts import add_tts_args, make_engine, prepare_clip  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "video-out")
 AUDIO = os.path.join(OUT, "audio")
 CLIPS = os.path.join(AUDIO, "clips")
 SR = 48000
-
-DEFAULT_VOICE = os.path.join(OUT, "voices", "en-us-libritts-high", "en-us-libritts-high.onnx")
-DEFAULT_SPEAKER = 228      # LibriTTS reader 5876: clean recording, calm, clear (see video/README.md)
-LENGTH_SCALE = 1.06        # slightly slower than the model's default pace
 
 # Timing (seconds)
 TITLE_HOLD = 3.5           # title on screen before anything moves (it also fades in from black)
@@ -51,9 +50,6 @@ EXTRA_LEAD = {"6.5": 2.0}
 END_HOLD = 9.0             # end card
 FADE_IN = 1.5              # from black at the very start
 FADE_OUT = 2.0             # to black at the very end
-
-# Spoken-only fixes (subtitles keep the original text).
-PRONOUNCE = {r"\bReLU\b": "ray-loo"}
 
 
 # ------------------------------------------------------------------ story
@@ -82,43 +78,6 @@ def read_story(path):
         for b in c["beats"]:
             b["text"] = b["text"].replace("*", "")  # markdown emphasis
     return chapters
-
-
-# ------------------------------------------------------------------ TTS
-
-def load_voice(path):
-    try:
-        from piper import PiperVoice
-        from piper.config import SynthesisConfig
-    except ImportError:
-        sys.exit("Piper is not installed: pip install -r video/requirements.txt")
-    if not os.path.exists(path):
-        sys.exit(f"Voice model not found: {path}\nSee video/README.md for where to download it.")
-    return PiperVoice.load(path), SynthesisConfig
-
-
-def speak(voice, Config, text, speaker):
-    spoken = text
-    for pat, rep in PRONOUNCE.items():
-        spoken = re.sub(pat, rep, spoken)
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as w:
-        voice.synthesize_wav(spoken, w, syn_config=Config(
-            speaker_id=speaker, length_scale=LENGTH_SCALE, noise_scale=0.5, noise_w_scale=0.6))
-    buf.seek(0)
-    with wave.open(buf) as w:
-        sr = w.getframerate()
-        x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float32) / 32768
-    # Trim the model's leading/trailing near-silence so padding is exact.
-    level = np.abs(x)
-    idx = np.where(level > 0.01)[0]
-    if len(idx):
-        x = x[max(idx[0] - int(0.03 * sr), 0): idx[-1] + int(0.08 * sr)]
-    x = resample_poly(x, SR, sr)  # 22.05 kHz model output -> 48 kHz
-    # Even loudness across beats: RMS of the voiced part to -20 dBFS.
-    voiced = x[np.abs(x) > 0.02]
-    rms = np.sqrt(np.mean(voiced ** 2)) if len(voiced) else 0.1
-    return (x * (10 ** (-20 / 20) / rms)).astype(np.float32)
 
 
 def write_wav(path, x, channels=1):
@@ -222,8 +181,7 @@ def duck_report(timeline):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--voice", default=DEFAULT_VOICE)
-    ap.add_argument("--speaker", type=int, default=DEFAULT_SPEAKER)
+    add_tts_args(ap)
     ap.add_argument("--mix-only", action="store_true", help="reuse narration/music, redo the mix")
     args = ap.parse_args()
     os.makedirs(CLIPS, exist_ok=True)
@@ -233,15 +191,17 @@ def main():
     print(f"{len(chapters)} chapters, {len(beats)} beats")
 
     # 1-2. One cached clip per beat (re-synthesised only if the text or voice changes).
-    voice = None
+    engine = None
     durations = {}
+    voice_id = f"{args.tts}|{args.voice}|{args.speaker}|{args.speed}"
     for i, b in enumerate(beats):
-        key = hashlib.sha1(f"{args.voice}|{args.speaker}|{LENGTH_SCALE}|{b['text']}".encode()).hexdigest()[:10]
+        key = hashlib.sha1(f"{voice_id}|{b['text']}".encode()).hexdigest()[:10]
         path = os.path.join(CLIPS, f"{b['id']}-{key}.wav")
         if not os.path.exists(path):
-            if voice is None:
-                voice, Config = load_voice(args.voice)
-            write_wav(path, speak(voice, Config, b["text"], args.speaker))
+            if engine is None:
+                engine = make_engine(args)
+                print(f"voice: {engine.name}")
+            write_wav(path, prepare_clip(*engine.synth(b["text"]), SR))
             print(f"  spoke {b['id']:>5} ({i + 1}/{len(beats)})")
         b["clip"] = path
         durations[b["id"]] = len(read_wav(path)) / SR
@@ -263,7 +223,6 @@ def main():
 
     # 5. Soundtrack.
     if not (args.mix_only and os.path.exists(os.path.join(AUDIO, "music.wav"))):
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         from music import render_music
         music = render_music(timeline, SR)
         write_wav(os.path.join(AUDIO, "music.wav"), music.reshape(-1), channels=2)
