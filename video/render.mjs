@@ -8,17 +8,22 @@
  * into ffmpeg. No frame files touch the disk.
  *
  * The video is rendered in chunks (one per chapter) into video-out/chunks/. Finished chunks
- * are skipped on the next run, so an interrupted render resumes where it stopped.
+ * are skipped on the next run, so an interrupted render resumes where it stopped. A chunk is
+ * only reused if it was rendered from the same timeline and frame settings (fingerprint in its
+ * .done file), so rebuilding the audio with a new voice re-renders what changed.
  *
  * Usage (from the repo root, after `python3 video/build_audio.py`):
  *   node video/render.mjs --test 30     # first 30 s, with audio -> video-out/test.mp4
  *   node video/render.mjs               # full video -> video-out/neuron-story.mp4
  *   node video/render.mjs --gpu         # use the GPU (recommended on your own computer)
  *   node video/render.mjs --bench 8     # time 8 frames per chapter, estimate the full render
+ *   node video/render.mjs --preview     # chapter 1 only, with its slice of the final audio
+ *                                       #   -> video-out/chapter1-preview.mp4 (chunk reused by the full render)
  * Options: --port 4179, --quality 95 (JPEG quality of captured frames),
  *          CHROME_PATH=/path/to/chrome to use a specific Chromium build.
  */
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,6 +47,7 @@ const opt = (name, fallback) => {
 };
 const TEST = opt('test', false) === false ? 0 : Number(opt('test')) || 30;
 const BENCH = opt('bench', false) === false ? 0 : Number(opt('bench')) || 8;
+const PREVIEW = opt('preview', false) === true; // chapter 1 only
 const GPU = opt('gpu', false) === true;
 const PORT = Number(opt('port', 4179));
 const QUALITY = Number(opt('quality', 95));
@@ -100,6 +106,23 @@ function fadeAt(t) {
 
 /* ------------------------------------------------------------------ chunks */
 
+/** Identifies what a chunk was rendered from; a chunk is reused only if this matches. */
+const FINGERPRINT = createHash('sha1')
+  .update(JSON.stringify({ video, W, H, FPS, QUALITY }))
+  .digest('hex')
+  .slice(0, 16);
+
+function chunkDone(c) {
+  const marker = join(CHUNKS, `${c.name}.done`);
+  if (!existsSync(marker) || !existsSync(join(CHUNKS, `${c.name}.mp4`))) return false;
+  try {
+    const m = JSON.parse(readFileSync(marker, 'utf8'));
+    return m.f0 === c.f0 && m.f1 === c.f1 && m.fingerprint === FINGERPRINT;
+  } catch {
+    return false;
+  }
+}
+
 function chunkPlan() {
   if (BENCH) {
     // A few frames from the middle of every chapter (the heavy scenes differ a lot).
@@ -145,10 +168,14 @@ async function waitForServer(url, ms = 30000) {
 async function main() {
   mkdirSync(CHUNKS, { recursive: true });
   const plan = chunkPlan();
-  const todo = plan.filter((c) => TEST || BENCH || !existsSync(join(CHUNKS, `${c.name}.done`)));
+  // --preview: only the first chunk (chapter 1), rendered exactly as the full render would.
+  const wanted = PREVIEW ? plan.slice(0, 1) : plan;
+  const todo = wanted.filter((c) => TEST || BENCH || !chunkDone(c));
   const framesTodo = todo.reduce((n, c) => n + c.f1 - c.f0, 0);
   console.log(`Video ${video.duration.toFixed(1)} s, ${TOTAL_FRAMES} frames at ${FPS} fps, ${W}x${H}.`);
-  console.log(BENCH ? `Benchmark: ${BENCH} frames per chapter.` : TEST ? `Test render: first ${TEST} s.` : `${plan.length} chunks, ${plan.length - todo.length} already done, ${framesTodo} frames to render.`);
+  console.log(BENCH ? `Benchmark: ${BENCH} frames per chapter.` : TEST ? `Test render: first ${TEST} s.`
+    : PREVIEW ? `Chapter 1 preview: ${todo.length ? `${framesTodo} frames to render` : 'chunk-01 already rendered, reusing it'}.`
+      : `${plan.length} chunks, ${plan.length - todo.length} already done, ${framesTodo} frames to render.`);
 
   if (todo.length) {
     // Build the site and serve the production bundle.
@@ -236,7 +263,7 @@ async function main() {
       ff.stdin.end();
       await ffDone;
       renameSync(tmp, target);
-      if (!TEST) writeFileSync(join(CHUNKS, `${c.name}.done`), JSON.stringify({ f0: c.f0, f1: c.f1, when: new Date().toISOString() }));
+      if (!TEST) writeFileSync(join(CHUNKS, `${c.name}.done`), JSON.stringify({ f0: c.f0, f1: c.f1, fingerprint: FINGERPRINT, when: new Date().toISOString() }));
     }
     const spf = (Date.now() - t0) / 1000 / Math.max(done, 1);
     console.log(`\nRendered ${done} frames in ${fmt(spf * done)} (${spf.toFixed(2)} s/frame).`);
@@ -259,6 +286,22 @@ async function main() {
       '-movflags', '+faststart', join(OUT, 'test.mp4')]);
     rmSync(join(OUT, 'test-video.mp4'));
     console.log('Wrote video-out/test.mp4');
+    return;
+  }
+  if (PREVIEW) {
+    // Chapter 1's chunk + the same time range cut from the final mix, with short audio fades.
+    // The chunk starts at 0 (title and intro included) and ends where chapter 2's card begins.
+    const c = plan[0];
+    const start = c.f0 / FPS;
+    const dur = (c.f1 - c.f0) / FPS;
+    const fadeOut = Math.min(1.0, dur / 4);
+    run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', join(CHUNKS, `${c.name}.mp4`),
+      '-ss', start.toFixed(3), '-t', dur.toFixed(3), '-i', mix,
+      '-af', `afade=t=in:st=0:d=0.5,afade=t=out:st=${(dur - fadeOut).toFixed(3)}:d=${fadeOut.toFixed(3)}`,
+      '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000',
+      '-t', dur.toFixed(3), '-movflags', '+faststart', join(OUT, 'chapter1-preview.mp4')]);
+    console.log(`Wrote video-out/chapter1-preview.mp4 (${start.toFixed(1)}-${(start + dur).toFixed(1)} s of the timeline).`);
+    console.log('The full render (node video/render.mjs) will reuse this chapter 1 chunk.');
     return;
   }
   const list = join(CHUNKS, 'list.txt');

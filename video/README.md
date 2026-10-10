@@ -102,10 +102,14 @@ python video/build_audio.py --voice af_heart          # or --tts piper
 # 2. Optional: a 30-second test with audio -> video-out/test.mp4
 node video/render.mjs --test 30 --gpu
 
-# 3. Optional: estimate the full render time on this machine
+# 3. Optional: chapter 1 only, with its slice of the final audio, to check voice, music
+#    and sync -> video-out/chapter1-preview.mp4. The full render reuses this chunk.
+node video/render.mjs --preview --gpu
+
+# 4. Optional: estimate the full render time on this machine
 node video/render.mjs --bench 8 --gpu
 
-# 4. Full render -> video-out/neuron-story.mp4 (+ video-out/neuron-story.srt)
+# 5. Full render -> video-out/neuron-story.mp4 (+ video-out/neuron-story.srt)
 node video/render.mjs --gpu
 ```
 
@@ -114,7 +118,14 @@ the WebGL renderer it got, so you can confirm the GPU is in use.
 
 **Resuming:** the full render is split into one chunk per chapter (`video-out/chunks/`).
 Finished chunks are kept, so if the render stops, run the same command again and it
-continues with the next chapter. Delete `video-out/chunks/` to start over.
+continues with the next chapter. A chunk is reused only if it was rendered from the same
+`timeline.json` and frame settings, so after rebuilding the audio (for example with a new voice)
+the affected chapters render again automatically. Delete `video-out/chunks/` to start over,
+which you should also do after changing the site's code.
+
+**Chapter 1 preview:** `--preview` renders just the first chunk (title, intro and chapter 1, up
+to where chapter 2's card begins) and muxes the same time range of the final mix with a 0.5 s
+fade in and 1 s fade out. The picture cuts at the end rather than fading.
 
 ## How it fits together
 
