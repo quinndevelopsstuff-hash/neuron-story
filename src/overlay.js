@@ -117,9 +117,19 @@ export class Overlay {
     root.appendChild(article);
 
     this._fill = -1;
+    this.fadeFraction = null; // capture mode: per-segment fade fractions (see setSegmentSeconds)
     this._chapter = -2;
     this._intro = -1;
     this._active = new Set();
+  }
+
+  /**
+   * Capture mode: given each segment's length in seconds of video, use short, even text
+   * fades (about 0.35 s) instead of a fixed fraction of the segment.
+   * @param {Record<string, number>} seconds  segment id -> seconds
+   */
+  setSegmentSeconds(seconds) {
+    this.fadeFraction = new Map(Object.entries(seconds).map(([id, s]) => [id, Math.min(FADE, 0.35 / Math.max(s, 0.1))]));
   }
 
   ready() {
@@ -153,8 +163,9 @@ export class Overlay {
       const f = (p - start) / (end - start);
       let o = 0;
       if (f >= 0 && f <= 1) {
-        const fadeOut = item.seg.type === 'end' ? 1 : Math.min((1 - f) / FADE, 1);
-        o = Math.min(f / FADE, 1, fadeOut);
+        const fade = this.fadeFraction?.get(item.seg.id) ?? FADE;
+        const fadeOut = item.seg.type === 'end' ? 1 : Math.min((1 - f) / fade, 1);
+        o = Math.min(f / fade, 1, fadeOut);
         o = o * o * (3 - 2 * o);
       }
       this._set(item, o);

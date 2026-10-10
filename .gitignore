@@ -4,3 +4,10 @@ training/data/
 __pycache__/
 .DS_Store
 .vercel
+
+# Video pipeline output (never committed): audio, frames, chunks, renders
+video-out/
+*.mp4
+*.wav
+*.srt
+*.onnx

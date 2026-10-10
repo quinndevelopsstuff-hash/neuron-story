@@ -416,6 +416,12 @@ html { scrollbar-width: thin; scrollbar-color: rgba(120, 180, 255, 0.25) transpa
   .chapter-label { top: calc(env(safe-area-inset-top) + 12px); }
 }
 
+/* ---------- video capture mode (?capture): no interactive chrome ---------- */
+.capture .autoplay-controls,
+.capture .progress,
+.capture .intro .hint { display: none !important; }
+.capture-fade { position: fixed; inset: 0; z-index: 10; background: #000; opacity: 0; pointer-events: none; }
+
 @media (prefers-reduced-motion: reduce) {
   .chevron { animation: none; opacity: 0.9; }
   .chapter-label, .intro .hint, .marker::before, .autoplay-controls, .copyright { transition: none; }

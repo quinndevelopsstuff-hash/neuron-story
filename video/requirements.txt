@@ -1,0 +1,4 @@
+# Video pipeline (video/build_audio.py, video/music.py)
+piper-tts>=1.3
+numpy>=1.24
+scipy>=1.10

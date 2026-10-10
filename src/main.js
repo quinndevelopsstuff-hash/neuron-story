@@ -22,7 +22,16 @@ const autoplay = new AutoPlay(document.getElementById('ui'), tl.at('end', 0.3));
 const pastTitle = tl.get('intro').end * 0.5;
 
 // Debug hook for automated checks: ?debug exposes the timeline and scroll controller.
-if (new URLSearchParams(window.location.search).has('debug')) window.__story = { tl, scroll };
+const params = new URLSearchParams(window.location.search);
+if (params.has('debug')) window.__story = { tl, scroll };
+
+/*
+ * Video capture mode (?capture only; the normal site is unaffected). The page stops its own
+ * render loop and instead exposes window.__renderAt(p, time, fade), which draws exactly one
+ * frame for story progress p and animation time `time` (seconds). Used by video/render.mjs.
+ */
+const CAPTURE = params.has('capture');
+if (CAPTURE) document.body.classList.add('capture');
 
 async function start() {
   // Three.js and the scene modules load in parallel with the network data.
@@ -63,7 +72,7 @@ async function start() {
   // Time-lapse data for 7.12-7.14 (real digits + training snapshots) loads in the background;
   // until it arrives those beats fall back to a simple blend.
   const hud = new TimelapseHud(document.getElementById('ui'));
-  loadTimelapse(net, `${import.meta.env.BASE_URL}data/`)
+  const loadTimelapseDone = loadTimelapse(net, `${import.meta.env.BASE_URL}data/`)
     .then((tlData) => {
       view.setTimelapse(tlData);
       director.setTimelapse(tlData);
@@ -71,21 +80,8 @@ async function start() {
     })
     .catch((err) => console.warn('Time-lapse data unavailable:', err));
 
-  let last = performance.now();
-  let slowFrames = 0;
-  let frames = 0;
-
-  function frame(now) {
-    const rawDt = (now - last) / 1000;
-    const dt = Math.min(rawDt, 0.1);
-    last = now;
-    const time = now / 1000;
-
-    // Auto-play gets the real elapsed time (capped only for tab switches) so its speed
-    // stays correct even when frames are slow.
-    autoplay.setShown(scroll.target > pastTitle);
-    autoplay.tick(Math.min(rawDt, 0.5));
-    const p = scroll.update(dt);
+  /** Draw one frame of the story at progress p and animation time `time` (seconds). */
+  function drawScene(p, time) {
     const s = director.update(p, time);
 
     rig.update(p, time);
@@ -105,6 +101,43 @@ async function start() {
     hud.update(s);
     overlay.update(p);
     stage.render();
+  }
+
+  if (CAPTURE) {
+    // Fixed 1x resolution, no adaptive scaling, no render loop: the capture script drives frames.
+    stage.setDpr(1);
+    const fadeEl = document.createElement('div');
+    fadeEl.className = 'capture-fade';
+    document.body.appendChild(fadeEl);
+    const timelapseReady = loadTimelapseDone;
+    window.__captureReady = Promise.all([timelapseReady, document.fonts.ready]).then(() => true);
+    /** Per-segment fade lengths, in seconds of video (so text fades are short and even). */
+    window.__setSegmentSeconds = (seconds) => overlay.setSegmentSeconds(seconds);
+    window.__renderAt = (p, time, fade = 0) => new Promise((resolve) => {
+      document.body.classList.toggle('autoplay-on', p > pastTitle); // copyright footer
+      drawScene(p, time);
+      fadeEl.style.opacity = String(fade);
+      // Resolve after the frame has been presented, so a screenshot sees it.
+      requestAnimationFrame(() => resolve(true));
+    });
+    return;
+  }
+
+  let last = performance.now();
+  let slowFrames = 0;
+  let frames = 0;
+
+  function frame(now) {
+    const rawDt = (now - last) / 1000;
+    const dt = Math.min(rawDt, 0.1);
+    last = now;
+    const time = now / 1000;
+
+    // Auto-play gets the real elapsed time (capped only for tab switches) so its speed
+    // stays correct even when frames are slow.
+    autoplay.setShown(scroll.target > pastTitle);
+    autoplay.tick(Math.min(rawDt, 0.5));
+    drawScene(scroll.update(dt), time);
 
     // Adaptive resolution: if frames are consistently slow, render fewer pixels.
     frames++;
