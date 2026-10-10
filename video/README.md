@@ -96,8 +96,9 @@ Clips are cached per engine, voice and text, so switching voice only re-speaks w
 # 0. Pick a narrator (see above)
 python video/voice_samples.py
 
-# 1. Audio: narration clips, timeline, subtitles, soundtrack, mix (about 5 min)
-python video/build_audio.py --voice af_heart          # or --tts piper
+# 1. Audio: narration clips, timeline, subtitles, soundtrack, mix (about 5 min).
+#    --script video speaks video/VIDEO_SCRIPT.md (written for the ear) instead of STORY.md.
+python video/build_audio.py --script video --voice af_heart      # or --tts piper
 
 # 2. Optional: a 30-second test with audio -> video-out/test.mp4
 node video/render.mjs --test 30 --gpu
@@ -131,6 +132,7 @@ fade in and 1 s fade out. The picture cuts at the end rather than fading.
 
 | File | Role |
 | --- | --- |
+| `video/VIDEO_SCRIPT.md` | Video-only narration: same chapters, beat IDs and stage directions as STORY.md, rewritten for the ear (`--script video`). In the video, the on-screen text and subtitles use it too |
 | `video/tts.py` | TTS engines behind one interface (`--tts kokoro` default, `--tts piper`), pronunciation fixes, clip levelling |
 | `video/voice_samples.py` | Voice audition: beats 1.2, 3.7, 6.8 per voice → `video-out/voice-samples/` |
 | `video/build_audio.py` | STORY.md → per-beat TTS clips → timeline built from the narration → `narration.wav`, `timeline.json`, `.srt`; calls `music.py`; ducks and loudness-normalises the mix |

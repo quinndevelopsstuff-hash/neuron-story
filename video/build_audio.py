@@ -17,6 +17,7 @@ Usage (from the repo root):
   python3 video/build_audio.py                        # everything, Kokoro (default voice)
   python3 video/build_audio.py --voice am_michael     # another Kokoro voice
   python3 video/build_audio.py --tts piper            # Piper fallback (LibriTTS-high, speaker 228)
+  python3 video/build_audio.py --script video         # narration from video/VIDEO_SCRIPT.md
 """
 
 import argparse
@@ -53,6 +54,26 @@ FADE_OUT = 2.0             # to black at the very end
 
 
 # ------------------------------------------------------------------ story
+
+SCRIPTS = {
+    "site": os.path.join(ROOT, "STORY.md"),                 # the website's narration
+    "video": os.path.join(ROOT, "video", "VIDEO_SCRIPT.md"),  # rewritten for the ear
+}
+
+
+def load_script(name):
+    """Chapters/beats from the chosen script, checked one-to-one against STORY.md's beat IDs."""
+    chapters = read_story(SCRIPTS[name])
+    if name != "site":
+        ids = [b["id"] for c in chapters for b in c["beats"]]
+        site_ids = [b["id"] for c in read_story(SCRIPTS["site"]) for b in c["beats"]]
+        if ids != site_ids:
+            missing = sorted(set(site_ids) - set(ids))
+            extra = sorted(set(ids) - set(site_ids))
+            sys.exit(f"{os.path.relpath(SCRIPTS[name], ROOT)} must have the same beats as STORY.md, in order."
+                     f" Missing: {missing or 'none'}; extra: {extra or 'none'}.")
+    return chapters
+
 
 def read_story(path):
     """Chapters and beats from STORY.md, narration only (stage directions removed)."""
@@ -182,11 +203,14 @@ def duck_report(timeline):
 def main():
     ap = argparse.ArgumentParser()
     add_tts_args(ap)
+    ap.add_argument("--script", choices=sorted(SCRIPTS), default="site",
+                    help="narration text: site (STORY.md) or video (video/VIDEO_SCRIPT.md)")
     ap.add_argument("--mix-only", action="store_true", help="reuse narration/music, redo the mix")
     args = ap.parse_args()
     os.makedirs(CLIPS, exist_ok=True)
 
-    chapters = read_story(os.path.join(ROOT, "STORY.md"))
+    chapters = load_script(args.script)
+    print(f"script: {os.path.relpath(SCRIPTS[args.script], ROOT)}")
     beats = [b for c in chapters for b in c["beats"]]
     print(f"{len(chapters)} chapters, {len(beats)} beats")
 

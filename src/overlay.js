@@ -128,6 +128,19 @@ export class Overlay {
    * fades (about 0.35 s) instead of a fixed fraction of the segment.
    * @param {Record<string, number>} seconds  segment id -> seconds
    */
+  /**
+   * Capture mode: replace beat text with the narration actually spoken in the video
+   * (video/VIDEO_SCRIPT.md), so on-screen text, voice and subtitles always match.
+   * @param {Record<string, string>} texts  beat id -> plain text
+   */
+  setBeatTexts(texts) {
+    const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    for (const item of this.items) {
+      if (item.seg.type !== 'beat' || !(item.seg.id in texts)) continue;
+      item.node.querySelector('.text').innerHTML = esc(texts[item.seg.id]);
+    }
+  }
+
   setSegmentSeconds(seconds) {
     this.fadeFraction = new Map(Object.entries(seconds).map(([id, s]) => [id, Math.min(FADE, 0.35 / Math.max(s, 0.1))]));
   }

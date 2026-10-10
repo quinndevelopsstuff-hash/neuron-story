@@ -210,6 +210,9 @@ async function main() {
     });
     console.log(`WebGL renderer: ${renderer}`);
     await page.evaluate((secs) => window.__setSegmentSeconds(secs), Object.fromEntries(segs.map((s) => [s.id, s.dur])));
+    // On-screen text = the narration actually spoken (site or video script, from timeline.json).
+    await page.evaluate((texts) => window.__setBeatTexts(texts),
+      Object.fromEntries(segs.filter((s) => s.type === 'beat').map((s) => [s.id, s.text])));
 
     if (BENCH) {
       // Time a few frames per chapter (no video written) and estimate the full render.

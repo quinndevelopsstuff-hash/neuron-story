@@ -113,6 +113,8 @@ async function start() {
     window.__captureReady = Promise.all([timelapseReady, document.fonts.ready]).then(() => true);
     /** Per-segment fade lengths, in seconds of video (so text fades are short and even). */
     window.__setSegmentSeconds = (seconds) => overlay.setSegmentSeconds(seconds);
+    /** The narration spoken in the video (may differ from the site's text; see VIDEO_SCRIPT.md). */
+    window.__setBeatTexts = (texts) => overlay.setBeatTexts(texts);
     window.__renderAt = (p, time, fade = 0) => new Promise((resolve) => {
       document.body.classList.toggle('autoplay-on', p > pastTitle); // copyright footer
       drawScene(p, time);
