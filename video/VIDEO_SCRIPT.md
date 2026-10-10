@@ -5,7 +5,8 @@ STORY.md one-to-one: the same chapters, beat IDs and stage directions, so every 
 matches its scene. Only the narration differs, rewritten for the ear (and with nothing about
 scrolling, the page or the viewer being the camera). STORY.md stays the website's text.
 
-Status: chapter 1 rewritten; chapters 2-7 are still the website wording.
+Status: beats 1.1-1.5 in spoken-explainer style; 1.6-1.10 from the first rewrite;
+chapters 2-7 are still the website wording.
 
 ---
 
@@ -14,27 +15,27 @@ Status: chapter 1 rewritten; chapters 2-7 are still the website wording.
 ### 1.1
 [Total black. Far ahead, a single faint point of cool blue light pulses slowly. The camera is still.]
 
-See that faint light, way out in the dark? That's where we're headed.
+Okay. See that tiny light, way off in the dark? That's where we're headed.
 
 ### 1.2
 [The camera begins a slow drift forward. A sparse, very dim starfield fades in at the edges of the screen.]
 
-Somewhere, someone wrote a seven on a scrap of paper. A quick line across the top, then a slash down to the left. You'd know it the moment you saw it.
+Imagine someone jotting down a seven on the back of a receipt. Quick line across the top. Then a slash, down to the left. You'd know it in a heartbeat.
 
 ### 1.3
 [The light ahead flickers once, as if listening.]
 
-But how did you know? Try putting the rule into words. What is it, exactly, that makes a seven a seven?
+So how'd you know? Seriously, try saying the rule out loud. What actually makes a seven a seven?
 
 ### 1.4
 [The camera keeps drifting. The light pulses patiently.]
 
-Here's a thought experiment. Describe a seven over the phone, to someone who's never seen a written number. You'd run out of words long before the world ran out of ways to write one.
+Here's a fun one. Say you're on the phone with someone who's never seen a written number. Now describe a seven to them. You'd run out of words way before the world runs out of ways to write one.
 
 ### 1.5
 [Three faint ghost sevens drift past in the dark, each written differently: one crossed, one with a curled top, one lazy and nearly vertical. They dissolve.]
 
-Maybe it's a flat line on top with a diagonal coming down. Then you meet someone who crosses their sevens, or someone whose seven looks almost like a one.
+You might start with a flat line on top and a diagonal coming down. Then you meet someone who crosses their sevens. And someone else who writes it so lazily, it's almost a one.
 
 ### 1.6
 [The ghosts are gone. The camera keeps drifting; the light grows slightly.]
